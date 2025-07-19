@@ -1295,8 +1295,37 @@
             // Inicializar Supabase
             initSupabase: () => {
                 try {
+                    console.log('Inicializando Supabase...');
+                    console.log('CONFIG.supabaseUrl:', CONFIG.supabaseUrl);
+                    console.log('CONFIG.supabaseKey existe:', !!CONFIG.supabaseKey);
+                    
+                    // Verificar que supabase esté disponible
+                    if (typeof supabase === 'undefined') {
+                        console.error('Supabase no está disponible');
+                        return false;
+                    }
+                    
                     APP.supabase = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
                     console.log('Supabase inicializado correctamente');
+                    
+                    // Probar la conexión
+                    setTimeout(async () => {
+                        try {
+                            const { data, error } = await APP.supabase
+                                .from('levantamiento_de_publicidad')
+                                .select('count')
+                                .limit(1);
+                            
+                            if (error) {
+                                console.error('Error probando conexión Supabase:', error);
+                            } else {
+                                console.log('Conexión a Supabase verificada correctamente');
+                            }
+                        } catch (testError) {
+                            console.error('Error en prueba de conexión:', testError);
+                        }
+                    }, 1000);
+                    
                     return true;
                 } catch (error) {
                     console.error('Error al inicializar Supabase:', error);
@@ -1306,8 +1335,21 @@
             
             // Obtener inspecciones
             fetchInspections: async () => {
+                console.log('Fetching inspections...');
+                console.log('Online:', APP.state.isOnline);
+                console.log('Supabase disponible:', !!APP.supabase);
+                
                 if (!APP.state.isOnline) {
                     console.log('Offline: cargando datos locales');
+                    const offlineData = Utils.loadOfflineData();
+                    APP.state.inspections = offlineData.inspections || [];
+                    APP.state.pendingSync = offlineData.pendingSync || [];
+                    console.log('Datos offline cargados:', APP.state.inspections.length, 'inspecciones');
+                    return APP.state.inspections;
+                }
+                
+                if (!APP.supabase) {
+                    console.error('Supabase no está inicializado');
                     const offlineData = Utils.loadOfflineData();
                     APP.state.inspections = offlineData.inspections || [];
                     APP.state.pendingSync = offlineData.pendingSync || [];
@@ -1315,26 +1357,29 @@
                 }
                 
                 try {
+                    console.log('Consultando Supabase...');
                     const { data, error } = await APP.supabase
                         .from('levantamiento_de_publicidad')
                         .select('*')
                         .order('created_at', { ascending: false });
                     
                     if (error) {
+                        console.error('Error de Supabase:', error);
                         throw error;
                     }
                     
-                    APP.state.inspections = data;
+                    console.log('Datos obtenidos de Supabase:', data ? data.length : 0, 'inspecciones');
+                    APP.state.inspections = data || [];
                     APP.state.lastSyncTime = new Date();
                     
                     // Guardar también en almacenamiento local para acceso offline
                     Utils.saveOfflineData({
-                        inspections: data,
+                        inspections: data || [],
                         pendingSync: APP.state.pendingSync,
                         lastSync: new Date()
                     });
                     
-                    return data;
+                    return data || [];
                 } catch (error) {
                     console.error('Error fetching inspections:', error);
                     Utils.showNotification('Error de sincronización', 'No se pudieron cargar las inspecciones', 'error');
@@ -1343,6 +1388,7 @@
                     const offlineData = Utils.loadOfflineData();
                     APP.state.inspections = offlineData.inspections || [];
                     APP.state.pendingSync = offlineData.pendingSync || [];
+                    console.log('Usando datos de respaldo:', APP.state.inspections.length, 'inspecciones');
                     
                     return APP.state.inspections;
                 }
@@ -1350,6 +1396,8 @@
             
             // Guardar nueva inspección
             saveInspection: async (inspectionData) => {
+                console.log('Guardando inspección:', inspectionData.ppu);
+                
                 // Generar ID único para esta inspección
                 inspectionData.client_id = Utils.generateId();
                 inspectionData.created_at = new Date().toISOString();
@@ -1375,13 +1423,17 @@
                 }
                 
                 try {
+                    console.log('Enviando a Supabase...');
                     const { data, error } = await APP.supabase
                         .from('levantamiento_de_publicidad')
                         .insert([inspectionData]);
                     
                     if (error) {
+                        console.error('Error de Supabase:', error);
                         throw error;
                     }
+                    
+                    console.log('Datos enviados a Supabase correctamente');
                     
                     // Actualizar datos locales
                     APP.state.inspections.unshift(inspectionData);
@@ -1418,21 +1470,51 @@
                     return { success: true, synced: 0 };
                 }
                 
+                console.log('Sincronizando datos pendientes:', APP.state.pendingSync.length, 'registros');
+                
                 try {
                     let syncedCount = 0;
                     const pendingCopy = [...APP.state.pendingSync];
                     
                     for (const item of pendingCopy) {
+                        console.log('Sincronizando item:', item.ppu, 'con client_id:', item.client_id);
+                        
+                        // Verificar si ya existe en Supabase para evitar duplicados
+                        const { data: existingData, error: checkError } = await APP.supabase
+                            .from('levantamiento_de_publicidad')
+                            .select('id')
+                            .eq('client_id', item.client_id)
+                            .limit(1);
+                        
+                        if (checkError) {
+                            console.error('Error verificando duplicado:', checkError);
+                            continue;
+                        }
+                        
+                        if (existingData && existingData.length > 0) {
+                            console.log('Item ya existe en Supabase, removiendo de pendientes:', item.client_id);
+                            // Quitar de pendientes si ya existe
+                            APP.state.pendingSync = APP.state.pendingSync.filter(
+                                i => i.client_id !== item.client_id
+                            );
+                            syncedCount++;
+                            continue;
+                        }
+                        
+                        // Insertar solo si no existe
                         const { error } = await APP.supabase
                             .from('levantamiento_de_publicidad')
                             .insert([item]);
                         
                         if (!error) {
+                            console.log('Item sincronizado correctamente:', item.client_id);
                             // Quitar de pendientes si se sincronizó correctamente
                             APP.state.pendingSync = APP.state.pendingSync.filter(
                                 i => i.client_id !== item.client_id
                             );
                             syncedCount++;
+                        } else {
+                            console.error('Error sincronizando item:', error);
                         }
                     }
                     
@@ -1444,6 +1526,8 @@
                     });
                     
                     APP.state.lastSyncTime = new Date();
+                    
+                    console.log('Sincronización completada:', syncedCount, 'registros sincronizados');
                     
                     if (syncedCount > 0) {
                         Utils.showNotification(
@@ -3431,6 +3515,12 @@
                     const feedbackEl = document.getElementById('form-feedback');
                     const submitBtn = document.getElementById('submit-form');
                     
+                    // Prevenir envíos múltiples
+                    if (submitBtn.disabled) {
+                        console.log('Formulario ya está siendo enviado, ignorando...');
+                        return;
+                    }
+                    
                     if (!APP.state.selectedBus) {
                         feedbackEl.innerHTML = `
                             <div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
@@ -3537,6 +3627,28 @@
                             }
                         }
                         
+                        // Verificar si ya existe una inspección reciente para este bus
+                        const existingInspection = APP.state.inspections.find(insp => 
+                            insp.ppu === submissionData.ppu && 
+                            new Date(insp.created_at).toDateString() === new Date().toDateString()
+                        );
+                        
+                        if (existingInspection) {
+                            feedbackEl.innerHTML = `
+                                <div class="p-3 bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                                        <span>Ya existe una inspección para ${submissionData.ppu} hoy. ¿Desea continuar?</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <button onclick="Controllers.formController.forceSubmit()" class="btn btn-sm btn-warning mr-2">Sí, continuar</button>
+                                        <button onclick="document.getElementById('form-feedback').innerHTML = ''" class="btn btn-sm btn-outline">Cancelar</button>
+                                    </div>
+                                </div>
+                            `;
+                            return;
+                        }
+                        
                         // Save the inspection
                         const result = await DataService.saveInspection(submissionData);
                         
@@ -3598,6 +3710,96 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                             Guardar Registro
                         `;
+                    },
+                    
+                    // Función para forzar el envío cuando ya existe una inspección
+                    forceSubmit: async () => {
+                        console.log('Forzando envío de inspección...');
+                        const form = document.getElementById('inspection-form');
+                        const feedbackEl = document.getElementById('form-feedback');
+                        const submitBtn = document.getElementById('submit-form');
+                        
+                        // Disable submit button and show loading state
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin mr-2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                            Guardando...
+                        `;
+                        
+                        try {
+                            // Recolectar datos del formulario (repetir lógica de handleSubmit)
+                            const formData = new FormData(form);
+                            const submissionData = {
+                                numero_interno: APP.state.selectedBus.interno,
+                                ppu: APP.state.selectedBus.ppu,
+                                marca_chasis: APP.state.selectedBus.marca,
+                                lat: APP.state.userLocation?.latitude || TERMINALS[0].lat,
+                                lon: APP.state.userLocation?.longitude || TERMINALS[0].lon,
+                                terminal: Utils.getNearestTerminal(
+                                    APP.state.userLocation?.latitude || TERMINALS[0].lat,
+                                    APP.state.userLocation?.longitude || TERMINALS[0].lon
+                                ).name,
+                            };
+                            
+                            // Process checkbox fields
+                            ['izquierda', 'luneta', 'derecha'].forEach(side => {
+                                const key = `publicidad_${side}`;
+                                submissionData[key] = formData.get(key) === 'si';
+                                submissionData[`${key}_detalle`] = submissionData[key] ? formData.get(`${key}_detalle`) : null;
+                            });
+                            
+                            ['residuos_pegamento', 'dano_pintura'].forEach(obs => {
+                                submissionData[obs] = formData.get(obs) === 'si';
+                                submissionData[`${obs}_detalle`] = submissionData[obs] ? formData.get(`${obs}_detalle`) : null;
+                            });
+                            
+                            // Save the inspection
+                            const result = await DataService.saveInspection(submissionData);
+                            
+                            if (result.success) {
+                                feedbackEl.innerHTML = `
+                                    <div class="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+                                        <div class="flex items-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                            <span>Registro guardado correctamente${result.offline ? ' (modo sin conexión)' : ''}</span>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                // Reset form
+                                form.reset();
+                                APP.state.selectedBus = null;
+                                APP.state.damagePhoto = null;
+                                document.getElementById('selected-bus-details').classList.add('hidden');
+                                document.getElementById('damage-preview').classList.add('hidden');
+                                document.getElementById('damage-photo-container').classList.remove('hidden');
+                                
+                                // Update data
+                                DataService.processFleetData(APP.state.inspections);
+                                Controllers.formController.updatePendingCount();
+                                
+                                Utils.showNotification('Registro guardado', 'La inspección se ha guardado correctamente', 'success');
+                            } else {
+                                throw new Error(result.error || 'Error desconocido al guardar');
+                            }
+                        } catch (error) {
+                            console.error('Error en forceSubmit:', error);
+                            feedbackEl.innerHTML = `
+                                <div class="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                                    <div class="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" x2="9" y1="9" y2="15"/><line x1="9" x2="15" y1="9" y2="15"/></svg>
+                                        <span>Error al guardar el registro: ${error.message}</span>
+                                    </div>
+                                </div>
+                            `;
+                        } finally {
+                            // Re-enable submit button
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = `
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                Guardar Registro
+                            `;
+                        }
                     }
                 }
             },
@@ -5229,47 +5431,106 @@
             // Initialize application
             init: async () => {
                 console.log('Inicializando aplicación...');
+                console.log('Plataforma:', navigator.platform);
+                console.log('User Agent:', navigator.userAgent);
+                console.log('Es móvil:', window.innerWidth < 768);
+                
                 Utils.showLoader(true);
                 
                 try {
                     // Load fleet data
+                    console.log('Cargando datos de flota...');
                     APP.fleetData = Utils.loadFleetData();
+                    console.log('Datos de flota cargados:', APP.fleetData ? APP.fleetData.length : 0, 'buses');
+                    
+                    // Check connectivity first
+                    APP.state.isOnline = navigator.onLine;
+                    console.log('Estado de conexión:', APP.state.isOnline);
                     
                     // Initialize Supabase
+                    console.log('Inicializando Supabase...');
                     const supabaseInitialized = DataService.initSupabase();
                     if (!supabaseInitialized) {
                         console.warn('No se pudo inicializar Supabase, usando modo offline');
                         APP.state.isOnline = false;
                     }
                     
-                    // Check connectivity
-                    APP.state.isOnline = navigator.onLine;
-                    
                     // Initialize UI
+                    console.log('Inicializando UI...');
                     UI.init();
                     
-                    // Fetch inspections
-                    await DataService.fetchInspections();
+                    // Fetch inspections with retry
+                    console.log('Obteniendo inspecciones...');
+                    let retryCount = 0;
+                    let inspections = [];
+                    
+                    while (retryCount < 3 && inspections.length === 0) {
+                        try {
+                            inspections = await DataService.fetchInspections();
+                            console.log('Inspecciones obtenidas:', inspections.length);
+                        } catch (error) {
+                            console.error(`Intento ${retryCount + 1} falló:`, error);
+                            retryCount++;
+                            if (retryCount < 3) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        }
+                    }
                     
                     // Process fleet data
+                    console.log('Procesando datos de flota...');
                     DataService.processFleetData(APP.state.inspections);
                     
                     // Initial view
                     const isMobile = window.innerWidth < 768;
                     const initialView = isMobile ? 'form' : 'dashboard';
+                    console.log('Vista inicial:', initialView, '(móvil:', isMobile, ')');
                     UI.setActiveView(initialView);
                     
                     console.log('Aplicación inicializada correctamente');
+                    console.log('Estado final:', {
+                        inspections: APP.state.inspections.length,
+                        fleetData: APP.fleetData ? APP.fleetData.length : 0,
+                        isOnline: APP.state.isOnline,
+                        activeView: APP.state.activeView
+                    });
+                    
+                    // Verificar que los datos se cargaron correctamente
+                    setTimeout(() => {
+                        const hasData = APP.state.inspections.length > 0 || (APP.fleetData && APP.fleetData.length > 0);
+                        console.log('Verificación de datos:', {
+                            hasInspections: APP.state.inspections.length > 0,
+                            hasFleetData: APP.fleetData && APP.fleetData.length > 0,
+                            totalData: hasData
+                        });
+                        
+                        if (!hasData) {
+                            console.warn('No se cargaron datos, mostrando mensaje de ayuda');
+                            Utils.showNotification(
+                                'Sin datos',
+                                'No se pudieron cargar los datos. Verifica tu conexión.',
+                                'warning'
+                            );
+                        }
+                    }, 1000);
+                    
                 } catch (error) {
                     console.error('Error al inicializar la aplicación:', error);
-                    document.body.innerHTML = `
+                    
+                    // Mostrar error más amigable en móvil
+                    const errorMessage = `
                         <div class="p-8 text-center">
                             <h1 class="text-2xl font-bold text-red-600">Error de Inicialización</h1>
-                            <p class="text-gray-600 mt-2">No se pudo inicializar la aplicación. Por favor, recargue la página o contacte al administrador.</p>
+                            <p class="text-gray-600 mt-2">No se pudo inicializar la aplicación.</p>
                             <p class="text-sm text-gray-400 mt-4">${error.message}</p>
-                            <button onclick="location.reload()" class="mt-6 btn btn-primary">Reintentar</button>
+                            <div class="mt-6 space-y-2">
+                                <button onclick="location.reload()" class="btn btn-primary w-full">Reintentar</button>
+                                <button onclick="DataService.initSupabase() && location.reload()" class="btn btn-outline w-full">Reiniciar Conexión</button>
+                            </div>
                         </div>
                     `;
+                    
+                    document.body.innerHTML = errorMessage;
                 } finally {
                     Utils.showLoader(false);
                 }
@@ -5277,7 +5538,38 @@
         };
         
         // Start the application when DOM is ready
-        document.addEventListener('DOMContentLoaded', App.init);
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM cargado, iniciando aplicación...');
+            console.log('User Agent:', navigator.userAgent);
+            console.log('Es móvil:', window.innerWidth < 768);
+            console.log('Online:', navigator.onLine);
+            
+            // Agregar logs para diagnosticar problemas en móvil
+            setTimeout(() => {
+                console.log('Estado de la aplicación después de 2 segundos:');
+                console.log('APP.state:', APP.state);
+                console.log('APP.supabase:', !!APP.supabase);
+                console.log('APP.fleetData:', APP.fleetData ? APP.fleetData.length : 'No cargado');
+                
+                // Agregar botón de debug en móvil
+                if (window.innerWidth < 768) {
+                    const debugBtn = document.createElement('button');
+                    debugBtn.textContent = '🔧 DEBUG';
+                    debugBtn.style.cssText = 'position:fixed;top:10px;left:10px;z-index:9999;background:orange;color:white;padding:8px;border:none;border-radius:5px;font-size:12px;';
+                    debugBtn.onclick = () => {
+                        alert(`Estado de la app:
+- Inspecciones: ${APP.state.inspections.length}
+- Flota: ${APP.fleetData ? APP.fleetData.length : 0}
+- Online: ${APP.state.isOnline}
+- Supabase: ${!!APP.supabase}
+- Vista: ${APP.state.activeView}`);
+                    };
+                    document.body.appendChild(debugBtn);
+                }
+            }, 2000);
+            
+            App.init();
+        });
     </script>
 </body>
 </html>
