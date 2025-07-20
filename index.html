@@ -216,6 +216,33 @@
             animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
+        /* Estilos para la alerta de bus ya inspeccionado */
+        #bus-inspection-alert {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        #bus-inspection-alert.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        #bus-inspection-alert.hide {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        /* Responsive para móviles */
+        @media (max-width: 768px) {
+            #bus-inspection-alert {
+                top: 1rem !important;
+                left: 1rem !important;
+                right: 1rem !important;
+                transform: none !important;
+                max-width: none !important;
+                width: auto !important;
+            }
+        }
+        
         /* Notification dot */
         .notification-dot {
             position: absolute;
@@ -677,7 +704,7 @@
                             </div>
                             <div class="flex items-center space-x-1">
                                 <span class="h-2 w-2 bg-status-green rounded-full"></span>
-                                <span class="flex items-center"><strong id="active-users" class="text-brand-primary dark:text-brand-light mr-1">1</strong> Usuario Activo</span>
+                                <span class="flex items-center"><strong id="active-users-count" class="text-brand-primary dark:text-brand-light mr-1">0</strong> Usuario Activo</span>
                             </div>
                         </div>
                     </div>
@@ -759,6 +786,12 @@
                                 <div class="mt-2 flex items-center space-x-2">
                                     <span class="text-sm font-medium text-text-secondary dark:text-text-secondary-dark">Inspector asignado:</span>
                                     <span id="current-inspector" class="text-sm font-semibold text-brand-secondary dark:text-brand-light">Detectando...</span>
+                                </div>
+                                <div id="bus-status-indicator" class="mt-2 hidden">
+                                    <div class="flex items-center space-x-2 p-2 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
+                                        <i data-lucide="alert-triangle" class="h-4 w-4 text-yellow-600 dark:text-yellow-400"></i>
+                                        <span class="text-sm text-yellow-800 dark:text-yellow-200 font-medium">Bus ya inspeccionado - Ver alerta arriba</span>
+                                    </div>
                                 </div>
                                 <div class="mt-2 text-xs text-text-secondary dark:text-text-secondary-dark flex items-center">
                                     <i data-lucide="info" class="h-3 w-3 mr-1"></i>
@@ -1856,7 +1889,7 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjbXR4dnV1Y2p0dG5nY2F6Z2ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3MjUwMDEsImV4cCI6MjA1NjMwMTAwMX0.2WcIjMUEhSM6j9kYpbsYArQocZdHx86k7wXk-NyjIs0';
 
         const { createClient } = supabase;
-        let dbClient;
+        var dbClient;
 
         // Configuración de temas
         const htmlElement = document.documentElement;
@@ -1958,6 +1991,10 @@
             // Iniciar actualizaciones automáticas cada segundo
             startRealTimeUpdates();
             
+            // Iniciar seguimiento de usuarios activos
+            startUserActivityTracking();
+            startActiveUsersUpdates();
+            
             console.log('Seguimiento en tiempo real iniciado');
             showToast('Seguimiento en tiempo real activado - Ubicación actualizada cada segundo', 'success');
         }
@@ -1972,6 +2009,9 @@
                 clearInterval(realTimeUpdateInterval);
                 realTimeUpdateInterval = null;
             }
+            
+            // Detener seguimiento de usuarios activos
+            stopActiveUsersTracking();
             
             console.log('Seguimiento en tiempo real detenido');
         }
@@ -2030,8 +2070,15 @@
                         }
                     }
                     
-                    // Actualizar contador de usuarios activos
-                    updateActiveUsersCount();
+                    // Actualizar usuarios activos
+                    try {
+                        const newActiveUsers = await fetchActiveUsers();
+                        updateActiveUsersOnMap(newActiveUsers);
+                        updateActiveUsersCounter(newActiveUsers);
+                        activeUsers = newActiveUsers;
+                    } catch (error) {
+                        console.error('Error actualizando usuarios activos:', error);
+                    }
                     
                 } catch (error) {
                     console.error('Error en actualización en tiempo real:', error);
@@ -2642,7 +2689,7 @@
         
         // Variables globales para datos
         let busFleet = [];
-        let allInspections = [];
+        var allInspections = [];
         let currentUserLocation = null;
         let map;
         let userMarker;
@@ -2669,7 +2716,15 @@
         let lastInspectionCount = 0;
         let realTimeNotifications = [];
         let currentInspectorName = 'Inspector'; // Nombre base del inspector (se actualizará según terminal)
-        let currentView = 'dashboard'; // Vista actual activa
+        var currentView = 'dashboard'; // Vista actual activa
+        var currentTerminal = 'Detectando...'; // Terminal actual del usuario
+        
+        // Variables para usuarios activos en tiempo real
+        let activeUsers = [];
+        let currentSessionId = null;
+        let userActivityInterval = null;
+        let activeUsersUpdateInterval = null;
+        let userMapMarkers = new Map(); // Para almacenar marcadores del mapa
         
         const fleetSearchParams = {
             searchTerm: '',
@@ -2932,13 +2987,16 @@
                 allInspections = await fetchAllInspections();
                 lastInspectionCount = allInspections.length;
                 
+                // Cargar usuarios activos
+                activeUsers = await fetchActiveUsers();
+                
                 // Actualizar panel de notificaciones con datos reales
                 updateNotificationsPanel();
                 
                 // Inicializar nombre del inspector si ya tenemos ubicación
                 if (lastKnownPosition) {
                     const nearestTerminal = getNearestTerminal(lastKnownPosition.lat, lastKnownPosition.lon);
-                    updateInspectorName(nearestTerminal);
+                    updateTerminalInfo(nearestTerminal);
                 }
                 
                 // Actualizar estadísticas del dashboard con datos reales
@@ -2947,18 +3005,243 @@
                 // Actualizar contadores de flota
                 updateFleetCounters();
                 
+                // Actualizar contador de usuarios activos
+                updateActiveUsersCounter(activeUsers);
+                
                 // Actualizar gráficos si estamos en la vista de analítica
                 if (currentView === 'analytics') {
                     renderTerminalsComparison();
                     updateKPIs();
                 }
                 
-                console.log(`Datos cargados: ${busFleet.length} buses, ${allInspections.length} inspecciones`);
+                console.log(`Datos cargados: ${busFleet.length} buses, ${allInspections.length} inspecciones, ${activeUsers.length} usuarios activos`);
                 
             } catch (error) {
                 console.error('Error cargando datos iniciales:', error);
                 showToast('Error al cargar datos iniciales', 'error');
             }
+        }
+
+        // ===== SISTEMA DE USUARIOS ACTIVOS EN TIEMPO REAL =====
+        
+        // Generar ID de sesión único
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        
+        // Obtener información del dispositivo
+        function getDeviceInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+        }
+        
+        // Registrar usuario activo
+        async function registerActiveUser(lat, lon, terminal, inspectorName) {
+            try {
+                if (!dbClient) return;
+                
+                // Generar session ID si no existe
+                if (!currentSessionId) {
+                    currentSessionId = generateSessionId();
+                }
+                
+                const userData = {
+                    user_id: currentSessionId,
+                    inspector_name: inspectorName,
+                    terminal: terminal,
+                    lat: lat,
+                    lon: lon,
+                    session_id: currentSessionId,
+                    device_info: getDeviceInfo(),
+                    last_activity: new Date().toISOString()
+                };
+                
+                // Intentar upsert primero
+                let { error } = await dbClient
+                    .from('active_users')
+                    .upsert(userData, { 
+                        onConflict: 'session_id',
+                        ignoreDuplicates: false 
+                    });
+                
+                // Si falla el upsert, intentar insert/update manual
+                if (error && error.code === '42P10') {
+                    console.log('Upsert falló, intentando insert/update manual...');
+                    
+                    // Verificar si el usuario ya existe
+                    const { data: existingUser } = await dbClient
+                        .from('active_users')
+                        .select('session_id')
+                        .eq('session_id', currentSessionId)
+                        .single();
+                    
+                    if (existingUser) {
+                        // Actualizar usuario existente
+                        const { error: updateError } = await dbClient
+                            .from('active_users')
+                            .update(userData)
+                            .eq('session_id', currentSessionId);
+                        
+                        if (updateError) throw updateError;
+                    } else {
+                        // Insertar nuevo usuario
+                        const { error: insertError } = await dbClient
+                            .from('active_users')
+                            .insert([userData]);
+                        
+                        if (insertError) throw insertError;
+                    }
+                } else if (error) {
+                    throw error;
+                }
+                
+                console.log('Usuario activo registrado:', userData);
+                
+            } catch (error) {
+                console.error('Error registrando usuario activo:', error);
+            }
+        }
+        
+        // Obtener usuarios activos
+        async function fetchActiveUsers() {
+            try {
+                if (!dbClient) return [];
+                
+                const { data, error } = await dbClient
+                    .from('active_users')
+                    .select('*')
+                    .gte('last_activity', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Últimos 5 minutos
+                    .order('last_activity', { ascending: false });
+                
+                if (error) throw error;
+                
+                return data || [];
+                
+            } catch (error) {
+                console.error('Error obteniendo usuarios activos:', error);
+                return [];
+            }
+        }
+        
+        // Actualizar usuarios activos en el mapa
+        function updateActiveUsersOnMap(users) {
+            // Limpiar marcadores anteriores
+            userMapMarkers.forEach(marker => {
+                if (map && map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            });
+            userMapMarkers.clear();
+            
+            // Agregar nuevos marcadores
+            users.forEach(user => {
+                if (user.session_id !== currentSessionId) { // No mostrar el usuario actual
+                    const marker = L.marker([user.lat, user.lon], {
+                        icon: L.divIcon({
+                            html: `<div class="flex items-center justify-center bg-green-500 text-white rounded-full font-bold text-xs p-1" style="width: 28px; height: 28px;"><i data-lucide="user" class="h-3 w-3"></i></div>`,
+                            className: 'active-user-marker',
+                            iconSize: [28, 28]
+                        })
+                    });
+                    
+                    const popupContent = `
+                        <div class="text-center">
+                            <div class="font-bold text-green-600">${user.inspector_name}</div>
+                            <div class="text-sm text-gray-600">${user.terminal}</div>
+                            <div class="text-xs text-gray-500">Activo ahora</div>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    marker.addTo(map);
+                    userMapMarkers.set(user.session_id, marker);
+                }
+            });
+        }
+        
+        // Actualizar contador de usuarios activos
+        function updateActiveUsersCounter(users) {
+            const activeUsersCount = users.filter(user => user.session_id !== currentSessionId).length;
+            const counterElement = document.getElementById('active-users-count');
+            
+            if (counterElement) {
+                counterElement.textContent = activeUsersCount;
+                
+                // Actualizar el texto para plural/singular
+                const container = counterElement.parentElement;
+                if (container) {
+                    const textElement = container.querySelector('span:last-child');
+                    if (textElement) {
+                        textElement.textContent = activeUsersCount === 1 ? ' Usuario Activo' : ' Usuarios Activos';
+                    }
+                }
+            }
+        }
+        
+        // Iniciar seguimiento de actividad del usuario
+        function startUserActivityTracking() {
+            // Limpiar intervalo anterior si existe
+            if (userActivityInterval) {
+                clearInterval(userActivityInterval);
+            }
+            
+            // Actualizar actividad cada 30 segundos
+            userActivityInterval = setInterval(async () => {
+                if (lastKnownPosition && currentTerminal && currentTerminal !== 'Detectando...') {
+                    await registerActiveUser(
+                        lastKnownPosition.lat,
+                        lastKnownPosition.lon,
+                        currentTerminal,
+                        currentInspectorName
+                    );
+                }
+            }, 30000); // 30 segundos
+        }
+        
+        // Iniciar actualización de usuarios activos
+        function startActiveUsersUpdates() {
+            // Limpiar intervalo anterior si existe
+            if (activeUsersUpdateInterval) {
+                clearInterval(activeUsersUpdateInterval);
+            }
+            
+            // Actualizar usuarios activos cada 10 segundos
+            activeUsersUpdateInterval = setInterval(async () => {
+                try {
+                    activeUsers = await fetchActiveUsers();
+                    updateActiveUsersOnMap(activeUsers);
+                    updateActiveUsersCounter(activeUsers);
+                } catch (error) {
+                    console.error('Error actualizando usuarios activos:', error);
+                }
+            }, 10000); // 10 segundos
+        }
+        
+        // Detener seguimiento de usuarios activos
+        function stopActiveUsersTracking() {
+            if (userActivityInterval) {
+                clearInterval(userActivityInterval);
+                userActivityInterval = null;
+            }
+            
+            if (activeUsersUpdateInterval) {
+                clearInterval(activeUsersUpdateInterval);
+                activeUsersUpdateInterval = null;
+            }
+            
+            // Limpiar marcadores del mapa
+            userMapMarkers.forEach(marker => {
+                if (map && map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+            });
+            userMapMarkers.clear();
         }
 
         async function fetchAllInspections() {
@@ -3118,23 +3401,36 @@
             // Iniciar seguimiento en tiempo real de la ubicación del usuario
             startRealTimeTracking();
             
+            // Actualizar usuarios activos en el mapa
+            if (activeUsers.length > 0) {
+                updateActiveUsersOnMap(activeUsers);
+            }
+            
             return map;
         }
         
         function updateTerminalInfo(terminal) {
+            // Actualizar variable global
+            currentTerminal = terminal || 'Detectando...';
+            
             // Actualizar en la barra lateral
-            document.getElementById('sidebar-terminal').textContent = `Terminal: ${terminal || '--'}`;
-            document.getElementById('mobile-sidebar-terminal').textContent = `Terminal: ${terminal || '--'}`;
-            document.getElementById('user-panel-terminal').textContent = `Terminal: ${terminal || '--'}`;
+            document.getElementById('sidebar-terminal').textContent = `Terminal: ${currentTerminal}`;
+            document.getElementById('mobile-sidebar-terminal').textContent = `Terminal: ${currentTerminal}`;
+            document.getElementById('user-panel-terminal').textContent = `Terminal: ${currentTerminal}`;
             
             // Actualizar en el formulario si estamos en esa vista
             const currentTerminalElement = document.getElementById('current-terminal');
             if (currentTerminalElement) {
-                currentTerminalElement.textContent = terminal || 'Desconocido';
+                currentTerminalElement.textContent = currentTerminal;
             }
             
             // Actualizar nombre del inspector basado en el terminal
-            updateInspectorName(terminal);
+            updateInspectorName(currentTerminal);
+            
+            // Registrar usuario activo si tenemos ubicación
+            if (lastKnownPosition && currentTerminal && currentTerminal !== 'Detectando...') {
+                registerActiveUser(lastKnownPosition.lat, lastKnownPosition.lon, currentTerminal, currentInspectorName);
+            }
         }
         
         function updateInspectorName(terminal) {
@@ -5770,9 +6066,14 @@
                 document.getElementById('marca_chasis').value = bus.marca || '';
                 document.getElementById('suggestions-box').classList.add('hidden');
                 
+                // Verificar si el bus ya fue inspeccionado
+                checkBusInspectionStatus(bus.ppu);
+                
                 showToast(`Bus ${bus.ppu} seleccionado para inspección.`, 'success');
             }, 300);
         }
+        
+
         
         // Función genérica para configurar el cierre de modales
         function configureModalClosers(modal) {
@@ -5952,13 +6253,14 @@
                 renderFleetGrid();
             });
             
-            // Configurar búsqueda en el formulario
+            // Configurar búsqueda en el formulario con verificación de duplicados
             document.getElementById('ppu').addEventListener('input', async () => {
                 const query = document.getElementById('ppu').value.toLowerCase();
                 const suggestionsBox = document.getElementById('suggestions-box');
                 
                 if (query.length < 1) {
                     suggestionsBox.classList.add('hidden');
+                    hideBusInspectionAlert();
                     return;
                 }
                 
@@ -5982,12 +6284,22 @@
                             document.getElementById('numero_interno').value = bus.numero_interno;
                             document.getElementById('marca_chasis').value = bus.marca || '';
                             suggestionsBox.classList.add('hidden');
+                            
+                            // Verificar si el bus ya fue inspeccionado
+                            checkBusInspectionStatus(bus.ppu);
                         };
                         suggestionsBox.appendChild(div);
                     });
                     suggestionsBox.classList.remove('hidden');
                 } else {
                     suggestionsBox.classList.add('hidden');
+                }
+                
+                // Verificar duplicados en tiempo real mientras se escribe
+                if (query.length >= 3) {
+                    checkBusInspectionStatus(query);
+                } else {
+                    hideBusInspectionAlert();
                 }
             });
             
@@ -6004,6 +6316,17 @@
                 
                 if (!document.getElementById('numero_interno').value) {
                     showToast('Debe seleccionar un bus de la lista.', 'warning');
+                    return;
+                }
+                
+                // Verificar si el bus ya fue inspeccionado antes de guardar
+                const ppu = document.getElementById('ppu').value;
+                const existingInspection = allInspections.find(insp => 
+                    insp.ppu.toLowerCase() === ppu.toLowerCase()
+                );
+                
+                if (existingInspection) {
+                    showToast('Este bus ya fue inspeccionado. Verifica la alerta arriba.', 'warning');
                     return;
                 }
                 
@@ -6133,12 +6456,249 @@
         });
         
         // Limpiar seguimiento en tiempo real al cerrar la página
-        window.addEventListener('beforeunload', () => {
+        window.addEventListener('beforeunload', async () => {
             stopRealTimeTracking();
+            
+            // Eliminar usuario activo de la base de datos
+            if (currentSessionId && dbClient) {
+                try {
+                    await dbClient
+                        .from('active_users')
+                        .delete()
+                        .eq('session_id', currentSessionId);
+                } catch (error) {
+                    console.error('Error eliminando usuario activo:', error);
+                }
+            }
         });
         
-        // Sistema de notificaciones en tiempo real ya está activo
-        // Las notificaciones se muestran automáticamente basadas en registros reales
+        // Ajustar alerta en cambios de orientación móvil
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                const alertElement = document.getElementById('bus-inspection-alert');
+                if (alertElement && alertElement.style.display !== 'none') {
+                    // Reajustar posición después del cambio de orientación
+                    if (window.innerWidth <= 768) {
+                        alertElement.style.left = '1rem';
+                        alertElement.style.right = '1rem';
+                        alertElement.style.transform = 'none';
+                    } else {
+                        alertElement.style.left = '50%';
+                        alertElement.style.right = 'auto';
+                        alertElement.style.transform = 'translateX(-50%)';
+                    }
+                }
+            }, 100);
+        });
+        
+        // Ajustar alerta en redimensionamiento de ventana
+        window.addEventListener('resize', () => {
+            const alertElement = document.getElementById('bus-inspection-alert');
+            if (alertElement && alertElement.style.display !== 'none') {
+                // Reajustar posición después del redimensionamiento
+                if (window.innerWidth <= 768) {
+                    alertElement.style.left = '1rem';
+                    alertElement.style.right = '1rem';
+                    alertElement.style.transform = 'none';
+                } else {
+                    alertElement.style.left = '50%';
+                    alertElement.style.right = 'auto';
+                    alertElement.style.transform = 'translateX(-50%)';
+                }
+            }
+        });
+
+        // ===== FUNCIONES GLOBALES PARA VERIFICACIÓN DE DUPLICADOS =====
+        // Estas funciones deben estar en el scope global para que los botones onclick puedan acceder a ellas
+        
+        function checkBusInspectionStatus(ppu) {
+            if (!ppu) return;
+            
+            // Verificar que allInspections esté disponible
+            if (typeof allInspections === 'undefined') {
+                console.warn('allInspections no está disponible aún');
+                return;
+            }
+            
+            const existingInspection = allInspections.find(insp => 
+                insp.ppu.toLowerCase() === ppu.toLowerCase()
+            );
+            
+            if (existingInspection) {
+                showBusInspectionAlert(existingInspection);
+                showBusStatusIndicator();
+            } else {
+                hideBusInspectionAlert();
+                hideBusStatusIndicator();
+            }
+        }
+        
+        function showBusStatusIndicator() {
+            const indicator = document.getElementById('bus-status-indicator');
+            if (indicator) {
+                indicator.classList.remove('hidden');
+                lucide.createIcons();
+            }
+        }
+        
+        function hideBusStatusIndicator() {
+            const indicator = document.getElementById('bus-status-indicator');
+            if (indicator) {
+                indicator.classList.add('hidden');
+            }
+        }
+        
+        function showBusInspectionAlert(inspection) {
+            // Crear o actualizar la alerta
+            let alertElement = document.getElementById('bus-inspection-alert');
+            
+            if (!alertElement) {
+                alertElement = document.createElement('div');
+                alertElement.id = 'bus-inspection-alert';
+                alertElement.className = 'fixed top-4 left-4 right-4 md:left-1/2 md:right-auto md:transform md:-translate-x-1/2 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-lg shadow-lg p-4 max-w-md z-[9999] mx-auto';
+                document.body.appendChild(alertElement);
+            }
+            
+            const terminal = inspection.terminal || 'Terminal desconocido';
+            const inspector = inspection.inspector_name || 'Inspector';
+            const date = formatSimpleDate(inspection.created_at);
+            const hasIssues = inspection.dano_pintura || inspection.residuos_pegamento;
+            
+            alertElement.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <div class="h-8 w-8 rounded-full bg-yellow-500 flex items-center justify-center text-white">
+                            <i data-lucide="alert-triangle" class="h-4 w-4"></i>
+                        </div>
+                    </div>
+                    <div class="ml-3 flex-1 min-w-0">
+                        <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                            ¡Bus ya inspeccionado!
+                        </h3>
+                        <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300 space-y-1">
+                            <p class="truncate"><strong>PPU:</strong> ${inspection.ppu}</p>
+                            <p class="truncate"><strong>Terminal:</strong> ${terminal}</p>
+                            <p class="truncate"><strong>Inspector:</strong> ${inspector}</p>
+                            <p class="truncate"><strong>Fecha:</strong> ${date}</p>
+                            ${hasIssues ? '<p class="mt-1 text-red-600 dark:text-red-400"><strong>⚠️ Tiene problemas registrados</strong></p>' : ''}
+                        </div>
+                        <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                            <button onclick="overwriteInspection('${inspection.ppu}')" class="bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-medium px-3 py-2 rounded-md transition-colors flex-1 sm:flex-none">
+                                Sobrescribir
+                            </button>
+                            <button onclick="hideBusInspectionAlert()" class="bg-gray-500 hover:bg-gray-600 text-white text-xs font-medium px-3 py-2 rounded-md transition-colors flex-1 sm:flex-none">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="hideBusInspectionAlert()" class="ml-2 text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300 flex-shrink-0">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            `;
+            
+            // Mostrar la alerta con animación
+            alertElement.style.display = 'block';
+            alertElement.style.opacity = '0';
+            
+            // Animación responsive
+            if (window.innerWidth <= 768) {
+                // Móvil: animación vertical simple
+                alertElement.style.transform = 'translateY(-20px)';
+                setTimeout(() => {
+                    alertElement.style.opacity = '1';
+                    alertElement.style.transform = 'translateY(0)';
+                }, 10);
+            } else {
+                // Desktop: animación centrada
+                alertElement.style.transform = 'translate(-50%, -20px)';
+                setTimeout(() => {
+                    alertElement.style.opacity = '1';
+                    alertElement.style.transform = 'translate(-50%, 0)';
+                }, 10);
+            }
+            
+            lucide.createIcons();
+        }
+        
+        function hideBusInspectionAlert() {
+            const alertElement = document.getElementById('bus-inspection-alert');
+            if (alertElement) {
+                alertElement.style.opacity = '0';
+                
+                // Animación responsive para ocultar
+                if (window.innerWidth <= 768) {
+                    alertElement.style.transform = 'translateY(-20px)';
+                } else {
+                    alertElement.style.transform = 'translate(-50%, -20px)';
+                }
+                
+                setTimeout(() => {
+                    alertElement.style.display = 'none';
+                }, 300);
+            }
+        }
+        
+        function overwriteInspection(ppu) {
+            // Verificar que allInspections esté disponible
+            if (typeof allInspections === 'undefined') {
+                console.warn('allInspections no está disponible aún');
+                hideBusInspectionAlert();
+                return;
+            }
+            
+            // Buscar la inspección existente
+            const existingInspection = allInspections.find(insp => 
+                insp.ppu.toLowerCase() === ppu.toLowerCase()
+            );
+            
+            if (existingInspection) {
+                // Mostrar confirmación
+                if (confirm(`¿Estás seguro de que quieres sobrescribir la inspección del bus ${ppu}?\n\nEsta acción eliminará el registro anterior y creará uno nuevo.`)) {
+                    // Eliminar la inspección anterior
+                    deleteInspection(existingInspection.id);
+                }
+            }
+            
+            hideBusInspectionAlert();
+        }
+        
+        async function deleteInspection(inspectionId) {
+            try {
+                showLoader('Eliminando inspección anterior...');
+                
+                if (!dbClient) throw new Error("Cliente de Supabase no inicializado.");
+                
+                const { error } = await dbClient
+                    .from('levantamiento_de_publicidad')
+                    .delete()
+                    .eq('id', inspectionId);
+                
+                if (error) throw error;
+                
+                // Actualizar datos locales
+                allInspections = allInspections.filter(insp => insp.id !== inspectionId);
+                
+                // Actualizar estadísticas
+                updateDashboardStats();
+                updateFleetCounters();
+                
+                if (currentView === 'analytics') {
+                    renderTerminalsComparison();
+                    updateKPIs();
+                }
+                
+                updateNotificationsPanel();
+                
+                showToast('Inspección anterior eliminada. Puedes proceder con el nuevo registro.', 'success');
+                
+            } catch (error) {
+                console.error('Error deleting inspection:', error);
+                showToast(`Error al eliminar inspección: ${error.message}`, 'error');
+            } finally {
+                hideLoader();
+            }
+        }
 
     </script>
 </body>
