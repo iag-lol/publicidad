@@ -1922,11 +1922,11 @@
                 return;
             }
             
-            // Configurar seguimiento de ubicación en tiempo real
+            // Configurar seguimiento de ubicación en tiempo real (optimizado)
             const options = {
                 enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
+                timeout: 8000, // Reducido a 8 segundos para mayor velocidad
+                maximumAge: 30000 // Usar ubicación cacheada si tiene menos de 30 segundos
             };
             
             locationWatchId = navigator.geolocation.watchPosition(
@@ -2036,7 +2036,7 @@
                 } catch (error) {
                     console.error('Error en actualización en tiempo real:', error);
                 }
-            }, 1000); // Actualizar cada segundo
+            }, 2000); // Actualizar cada 2 segundos (menos frecuente para mejor rendimiento)
         }
         
         function updateUserLocation(lat, lon, accuracy = null) {
@@ -2064,7 +2064,7 @@
                 map.setView(userPos, 13);
             }
             
-            // Actualizar indicador de precisión GPS
+            // Actualizar indicador de precisión GPS (si existe)
             const accuracyElement = document.getElementById('gps-accuracy');
             if (accuracyElement && accuracy !== null) {
                 const accuracyMeters = Math.round(accuracy);
@@ -6007,7 +6007,7 @@
                     return;
                 }
                 
-                showLoader('Guardando inspección...');
+                showLoader('Obteniendo ubicación GPS...');
                 
                 if (!navigator.geolocation) {
                     showToast('La geolocalización no es soportada.', 'error');
@@ -6015,10 +6015,14 @@
                     return;
                 }
                 
+                // Optimizar el proceso de guardado
+                const startTime = Date.now();
+                
                 navigator.geolocation.getCurrentPosition(async (position) => {
                     const { latitude: lat, longitude: lon } = position.coords;
                     const nearestTerminal = getNearestTerminal(lat, lon);
                     
+                    // Preparar datos del formulario de forma más eficiente
                     const formData = new FormData(e.target);
                     const record = { 
                         lat, 
@@ -6029,9 +6033,15 @@
                         timestamp: new Date().toISOString()
                     };
                     
+                    // Procesar campos del formulario de forma optimizada
+                    const booleanFields = ['publicidad_izquierda', 'publicidad_luneta', 'publicidad_derecha', 'residuos_pegamento', 'dano_pintura'];
+                    const textFields = ['publicidad_izquierda_detalle', 'publicidad_luneta_detalle', 'publicidad_derecha_detalle', 'residuos_pegamento_detalle', 'dano_pintura_detalle'];
+                    
                     for (let [key, value] of formData.entries()) {
-                        if (key.startsWith('publicidad_') || key.startsWith('residuos_') || key.startsWith('dano_')) {
-                            record[key] = (value === 'true' || value === 'false') ? (value === 'true') : value;
+                        if (booleanFields.includes(key)) {
+                            record[key] = value === 'true';
+                        } else if (textFields.includes(key)) {
+                            record[key] = value || null;
                         } else {
                             record[key] = value;
                         }
@@ -6040,25 +6050,35 @@
                     try {
                         if (!dbClient) throw new Error("Cliente de Supabase no inicializado.");
                         
+                        // Actualizar loader con progreso
+                        showLoader('Guardando inspección en la base de datos...');
+                        
+                        console.log('Guardando inspección...', record);
+                        
+                        // Guardar en la base de datos
                         const { error } = await dbClient.from('levantamiento_de_publicidad').insert([record]);
                         
                         if (error) throw error;
                         
-                        // Actualizar datos
-                        allInspections = await fetchAllInspections();
+                        console.log('Inspección guardada en', Date.now() - startTime, 'ms');
                         
-                        // Actualizar estadísticas en tiempo real
-                        updateDashboardStats();
-                        updateFleetCounters();
-                        
-                        // Actualizar gráficos si estamos en la vista de analítica
-                        if (currentView === 'analytics') {
-                            renderTerminalsComparison();
-                            updateKPIs();
-                        }
-                        
-                        // Actualizar notificaciones
-                        updateNotificationsPanel();
+                        // Actualizar datos de forma asíncrona (no bloquear la UI)
+                        setTimeout(async () => {
+                            try {
+                                allInspections = await fetchAllInspections();
+                                updateDashboardStats();
+                                updateFleetCounters();
+                                
+                                if (currentView === 'analytics') {
+                                    renderTerminalsComparison();
+                                    updateKPIs();
+                                }
+                                
+                                updateNotificationsPanel();
+                            } catch (updateError) {
+                                console.error('Error actualizando datos:', updateError);
+                            }
+                        }, 100);
                         
                         showToast('Inspección guardada con éxito.', 'success');
                         
@@ -6086,6 +6106,10 @@
                 }, (error) => {
                     showToast(`Error de geolocalización: ${error.message}`, 'error');
                     hideLoader();
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 10000, // 10 segundos máximo
+                    maximumAge: 30000 // Usar ubicación cacheada si tiene menos de 30 segundos
                 });
             });
             
