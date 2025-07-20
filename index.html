@@ -5,20 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PubliBus - Sistema Avanzado de Inspección de Flota</title>
     
+    <!-- Tailwind CSS (crítico) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS (crítico para mapa) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Supabase (crítico) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Scripts diferidos para mejor rendimiento -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" defer></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+    
+    <!-- Scripts opcionales (cargados solo cuando se necesiten) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js" defer></script>
+    
+    <!-- Script local -->
     <script src="bus-alert-functions.js"></script>
 
 
@@ -206,17 +217,28 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* Pulse Animation */
+        /* Animaciones optimizadas */
         @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         .animate-pulse-slow {
-            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        /* Optimizaciones de rendimiento */
+        .view {
+            will-change: auto;
+            transform: translateZ(0);
+        }
+        
+        /* Reducir animaciones en dispositivos que prefieren menos movimiento */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
         
         /* Estilos para la alerta de bus ya inspeccionado */
@@ -2213,11 +2235,11 @@
                 return;
             }
             
-            // Configurar seguimiento de ubicación en tiempo real (optimizado)
+            // Configurar seguimiento de ubicación optimizado (menos frecuente)
             const options = {
-                enableHighAccuracy: true,
-                timeout: 8000, // Reducido a 8 segundos para mayor velocidad
-                maximumAge: 30000 // Usar ubicación cacheada si tiene menos de 30 segundos
+                enableHighAccuracy: false, // Cambiar a false para mejor rendimiento
+                timeout: 5000, // Reducido a 5 segundos
+                maximumAge: 60000 // Usar ubicación cacheada si tiene menos de 1 minuto
             };
             
             locationWatchId = navigator.geolocation.watchPosition(
@@ -2225,36 +2247,32 @@
                     const { latitude: lat, longitude: lon, accuracy } = position.coords;
                     lastKnownPosition = { lat, lon };
                     
-                    // Actualizar ubicación del usuario en el mapa
-                    updateUserLocation(lat, lon, accuracy);
+                    // Actualizar ubicación del usuario en el mapa (solo si cambió significativamente)
+                    if (!currentUserLocation || 
+                        Math.abs(currentUserLocation.lat - lat) > 0.001 || 
+                        Math.abs(currentUserLocation.lon - lon) > 0.001) {
+                        updateUserLocation(lat, lon, accuracy);
+                    }
                     
                     // Actualizar terminal más cercano
                     const nearestTerminal = getNearestTerminal(lat, lon);
                     updateTerminalInfo(nearestTerminal);
                     
-                    console.log(`Ubicación actualizada: ${lat}, ${lon} - Terminal: ${nearestTerminal} - Precisión: ${accuracy}m`);
-                    
-                    // Mostrar toast de confirmación solo la primera vez que se detecta el terminal
+                    // Mostrar toast solo la primera vez
                     if (!lastKnownPosition) {
-                        showToast(`Terminal detectado: ${nearestTerminal} - Inspector asignado automáticamente`, 'success');
+                        showToast(`Terminal: ${nearestTerminal}`, 'success');
                     }
                 },
                 (error) => {
                     console.error('Error en seguimiento de ubicación:', error);
-                    showToast('Error al obtener ubicación en tiempo real', 'warning');
                 },
                 options
             );
             
-            // Iniciar actualizaciones automáticas cada segundo
+            // Iniciar actualizaciones menos frecuentes
             startRealTimeUpdates();
             
-            // Iniciar seguimiento de usuarios activos
-            startUserActivityTracking();
-            startActiveUsersUpdates();
-            
-            console.log('Seguimiento en tiempo real iniciado');
-            showToast('Seguimiento en tiempo real activado - Ubicación actualizada cada segundo', 'success');
+            console.log('Seguimiento optimizado iniciado');
         }
         
         function stopRealTimeTracking() {
@@ -2279,69 +2297,28 @@
                 if (!isRealTimeEnabled) return;
                 
                 try {
-                    // Verificar nuevas inspecciones
+                    // Verificar nuevas inspecciones (menos frecuente)
                     const newInspections = await fetchAllInspections();
                     const currentCount = newInspections.length;
                     
                     if (currentCount > lastInspectionCount) {
-                        // Hay nuevas inspecciones
-                        const newInspectionsList = newInspections.slice(0, currentCount - lastInspectionCount);
-                        
-                        newInspectionsList.forEach(inspection => {
-                            const notification = {
-                                id: Date.now() + Math.random(),
-                                message: `${inspection.inspector_name || currentInspectorName} ha registrado el Bus ${inspection.ppu}`,
-                                timestamp: new Date(),
-                                type: 'inspection',
-                                data: inspection
-                            };
-                            
-                            addRealTimeNotification(notification);
-                            playNotificationSound();
-                            showToast(notification.message, 'success');
-                        });
-                        
-                        // Actualizar datos
+                        // Solo actualizar si hay cambios significativos
                         allInspections = newInspections;
                         lastInspectionCount = currentCount;
                         
-                        // Actualizar panel de notificaciones con los nuevos registros
-                        updateNotificationsPanel();
-                        
-                        // Actualizar estadísticas en tiempo real
-                        updateDashboardStats();
-                        updateFleetCounters();
-                        
-                        // Actualizar vistas si es necesario
+                        // Actualizar solo la vista actual
                         if (currentView === 'dashboard') {
-                            updateDashboardData();
+                            updateDashboardStats();
                         }
-                        if (currentView === 'fleet') {
-                            updateFleetData();
-                        }
-                        if (currentView === 'reports') {
-                            updateReportsData();
-                        }
-                        if (currentView === 'analytics') {
-                            renderTerminalsComparison();
-                            updateKPIs();
-                        }
-                    }
-                    
-                    // Actualizar usuarios activos
-                    try {
-                        const newActiveUsers = await fetchActiveUsers();
-                        updateActiveUsersOnMap(newActiveUsers);
-                        updateActiveUsersCounter(newActiveUsers);
-                        activeUsers = newActiveUsers;
-                    } catch (error) {
-                        console.error('Error actualizando usuarios activos:', error);
+                        
+                        // Mostrar notificación simple
+                        showToast('Nueva inspección registrada', 'success');
                     }
                     
                 } catch (error) {
-                    console.error('Error en actualización en tiempo real:', error);
+                    console.error('Error en actualización:', error);
                 }
-            }, 2000); // Actualizar cada 2 segundos (menos frecuente para mejor rendimiento)
+            }, 5000); // Actualizar cada 5 segundos para mejor rendimiento
         }
         
         function updateUserLocation(lat, lon, accuracy = null) {
@@ -2350,47 +2327,35 @@
             const userPos = [lat, lon];
             currentUserLocation = { lat, lon };
             
+            // Remover marcador anterior si existe
             if (userMarker) {
                 map.removeLayer(userMarker);
             }
             
+            // Crear marcador pequeño y simple (sin seguimiento gigante)
             userMarker = L.marker(userPos, {
                 icon: L.divIcon({
-                    html: `<div class="flex items-center justify-center bg-white border-2 border-brand-secondary text-brand-secondary rounded-full animate-pulse-slow" style="width: 30px; height: 30px;"><i data-lucide="user" class="h-4 w-4"></i></div>`,
-                    className: 'user-marker',
-                    iconSize: [30, 30]
+                    html: `<div class="flex items-center justify-center bg-blue-500 text-white rounded-full shadow-lg" style="width: 20px; height: 20px; font-size: 10px;">👤</div>`,
+                    className: 'user-marker-simple',
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
                 })
             }).addTo(map);
             
             userMarker.bindPopup("<b>Tu ubicación actual</b>");
             
-            // Centrar mapa en la ubicación del usuario si es la primera vez
+            // Centrar mapa en la ubicación del usuario solo la primera vez
             if (!lastKnownPosition) {
                 map.setView(userPos, 13);
             }
             
-            // Actualizar indicador de precisión GPS (si existe)
+            // Actualizar indicador de precisión GPS (optimizado)
             const accuracyElement = document.getElementById('gps-accuracy');
             if (accuracyElement && accuracy !== null) {
                 const accuracyMeters = Math.round(accuracy);
-                let accuracyText = `Precisión GPS: ${accuracyMeters}m`;
-                let accuracyClass = 'text-green-600 dark:text-green-400';
-                
-                if (accuracyMeters > 50) {
-                    accuracyText += ' (Baja precisión)';
-                    accuracyClass = 'text-yellow-600 dark:text-yellow-400';
-                } else if (accuracyMeters > 20) {
-                    accuracyText += ' (Precisión media)';
-                    accuracyClass = 'text-blue-600 dark:text-blue-400';
-                } else {
-                    accuracyText += ' (Alta precisión)';
-                }
-                
-                accuracyElement.textContent = accuracyText;
-                accuracyElement.className = `text-xs ${accuracyClass}`;
+                accuracyElement.textContent = `GPS: ${accuracyMeters}m`;
+                accuracyElement.className = `text-xs ${accuracyMeters > 50 ? 'text-yellow-600' : 'text-green-600'}`;
             }
-            
-            lucide.createIcons();
         }
         
         function addRealTimeNotification(notification) {
@@ -3398,7 +3363,7 @@
             }
         }
         
-        // Actualizar usuarios activos en el mapa
+        // Actualizar usuarios activos en el mapa - SOLO EL MÁS RECIENTE
         function updateActiveUsersOnMap(users) {
             // Limpiar marcadores anteriores
             userMapMarkers.forEach(marker => {
@@ -3408,30 +3373,36 @@
             });
             userMapMarkers.clear();
             
-            // Agregar nuevos marcadores
-            users.forEach(user => {
-                if (user.session_id !== currentSessionId) { // No mostrar el usuario actual
-                    const marker = L.marker([user.lat, user.lon], {
-                        icon: L.divIcon({
-                            html: `<div class="flex items-center justify-center bg-green-500 text-white rounded-full font-bold text-xs p-1" style="width: 28px; height: 28px;"><i data-lucide="user" class="h-3 w-3"></i></div>`,
-                            className: 'active-user-marker',
-                            iconSize: [28, 28]
-                        })
-                    });
-                    
-                    const popupContent = `
-                        <div class="text-center">
-                            <div class="font-bold text-green-600">${user.inspector_name}</div>
-                            <div class="text-sm text-gray-600">${user.terminal}</div>
-                            <div class="text-xs text-gray-500">Activo ahora</div>
-                        </div>
-                    `;
-                    
-                    marker.bindPopup(popupContent);
-                    marker.addTo(map);
-                    userMapMarkers.set(user.session_id, marker);
-                }
-            });
+            // Filtrar solo usuarios que no sean el actual
+            const otherUsers = users.filter(user => user.session_id !== currentSessionId);
+            
+            console.log(`🗺️ Usuarios activos encontrados: ${otherUsers.length}`);
+            
+            if (otherUsers.length > 0) {
+                // Tomar solo el usuario más reciente (último en actualizarse)
+                const latestUser = otherUsers[0]; // Ya viene ordenado por fecha más reciente
+                console.log(`📍 Mostrando solo el usuario más reciente: ${latestUser.inspector_name} en ${latestUser.terminal}`);
+                
+                const marker = L.marker([latestUser.lat, latestUser.lon], {
+                    icon: L.divIcon({
+                        html: `<div class="flex items-center justify-center bg-green-500 text-white rounded-full font-bold text-xs p-1" style="width: 28px; height: 28px;"><i data-lucide="user" class="h-3 w-3"></i></div>`,
+                        className: 'active-user-marker',
+                        iconSize: [28, 28]
+                    })
+                });
+                
+                const popupContent = `
+                    <div class="text-center">
+                        <div class="font-bold text-green-600">${latestUser.inspector_name}</div>
+                        <div class="text-sm text-gray-600">${latestUser.terminal}</div>
+                        <div class="text-xs text-gray-500">Activo ahora</div>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                marker.addTo(map);
+                userMapMarkers.set(latestUser.session_id, marker);
+            }
         }
         
         // Actualizar contador de usuarios activos
@@ -3518,6 +3489,14 @@
                 console.warn('Cliente de Supabase no inicializado');
                 return [];
             }
+            
+            // Verificar conectividad antes de hacer la petición
+            if (!navigator.onLine) {
+                console.warn('Sin conexión a internet');
+                showToast('Sin conexión a internet. Los datos se cargarán cuando se restablezca la conexión.', 'warning');
+                return [];
+            }
+            
             try {
                 const { data, error } = await dbClient
                     .from('levantamiento_de_publicidad')
@@ -3527,9 +3506,17 @@
                 return data || [];
             } catch (error) {
                 console.error('Error fetching inspections:', error);
-                // Solo mostrar error si es la primera vez
-                if (allInspections.length === 0) {
-                    showToast('Error al cargar los datos de inspección. Verificando conexión...', 'warning');
+                
+                // Manejar diferentes tipos de errores
+                if (error.message && error.message.includes('Failed to fetch')) {
+                    showToast('Error de conexión. Verifica tu conexión a internet.', 'error');
+                } else if (error.message && error.message.includes('net::ERR_INTERNET_DISCONNECTED')) {
+                    showToast('Sin conexión a internet. Los datos se cargarán cuando se restablezca la conexión.', 'warning');
+                } else {
+                    // Solo mostrar error si es la primera vez
+                    if (allInspections.length === 0) {
+                        showToast('Error al cargar los datos de inspección. Verificando conexión...', 'warning');
+                    }
                 }
                 return [];
             }
@@ -3905,12 +3892,12 @@
                 lucide.createIcons();
             }
         }        
-        // Carga de datos específicos por vista
+        // Carga de datos optimizada por vista
         async function loadDashboardData() {
-            showLoader('Cargando datos del dashboard...');
+            showLoader('Cargando dashboard...');
             
             try {
-                // Cargar datos si aún no están disponibles
+                // Cargar datos solo si no están disponibles
                 if (busFleet.length === 0) {
                     busFleet = await fetchBusFleet();
                 }
@@ -3918,35 +3905,24 @@
                     allInspections = await fetchAllInspections();
                 }
                 
-                // Inicializar o actualizar el mapa
+                // Inicializar mapa solo si no existe
                 if (!map) {
                     map = initMap();
+                    setTimeout(() => {
+                        if (map) {
+                            updateMapView(mapView || 'standard');
+                        }
+                    }, 100);
                 }
                 
-                // Asegurar que el mapa esté listo antes de actualizar la vista
-                setTimeout(() => {
-                    if (map) {
-                        updateMapView(mapView || 'standard');
-                    }
-                }, 200);
-                
-                // Actualizar estadísticas por terminal
+                // Actualizar solo estadísticas esenciales
                 updateDashboardStats();
-                
-                // Actualizar gráfico de inspecciones
                 updateInspectionsChart(allInspections);
-                
-                // Actualizar progreso de flota
                 updateFleetProgress();
                 
-                // Actualizar listas de daños y residuos
-                updateDashboardIncidentLists();
-                
-                // Mostrar usuarios activos (simulado en esta versión)
-                document.getElementById('active-users').textContent = Math.floor(Math.random() * 3) + 1;
             } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                showToast('Error al cargar los datos del dashboard. Revisando conexión...', 'warning');
+                console.error('Error loading dashboard:', error);
+                showToast('Error al cargar datos', 'warning');
             } finally {
                 hideLoader();
             }
@@ -6382,8 +6358,10 @@
             });
         }
         
-        // Event listeners
+        // Event listeners optimizados
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 Iniciando PubliBus (optimizado)...');
+            
             // Verificar que las funciones de alerta estén disponibles
             if (typeof hideBusInspectionAlert === 'undefined') {
                 console.error('Funciones de alerta no están disponibles. Verificando en 1 segundo...');
@@ -6394,11 +6372,37 @@
                     }
                 }, 1000);
             }
+            
             // Inicializar Supabase
             dbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
-            // Inicializar iconos de Lucide
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            // Inicializar iconos de Lucide de forma diferida
+            setTimeout(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }, 200);
+            
+            // Configurar listeners de conectividad
+            window.addEventListener('online', async () => {
+                console.log('✅ Conexión restablecida');
+                showToast('Conexión restablecida. Recargando datos...', 'success');
+                
+                // Recargar datos cuando se restablezca la conexión
+                try {
+                    busFleet = await fetchBusFleet();
+                    allInspections = await fetchAllInspections();
+                    updateDashboardStats();
+                    updateFleetCounters();
+                    showToast('Datos actualizados correctamente.', 'success');
+                } catch (error) {
+                    console.error('Error recargando datos:', error);
+                    showToast('Error al recargar datos.', 'error');
+                }
+            });
+            
+            window.addEventListener('offline', () => {
+                console.log('❌ Conexión perdida');
+                showToast('Conexión perdida. Algunas funciones pueden no estar disponibles.', 'warning');
+            });
             
             // CONFIGURAR NAVEGACIÓN DEL SIDEBAR - ESTO FALTABA
             const navLinks = document.querySelectorAll('.nav-link');
@@ -6515,6 +6519,12 @@
             
             // Eliminados los event listeners de paginación - ya no se necesita paginación
             
+            // Iniciar seguimiento optimizado después de configurar todo
+            setTimeout(() => {
+                startRealTimeTracking();
+                console.log('✅ PubliBus iniciado correctamente (optimizado)');
+            }, 500);
+            
             // Configurar búsqueda en la flota
             document.getElementById('fleet-search').addEventListener('input', (e) => {
                 fleetSearchParams.searchTerm = e.target.value;
@@ -6532,8 +6542,16 @@
                 renderFleetGrid();
             });
             
-            // Configurar búsqueda en el formulario con verificación de duplicados
+            // Configurar búsqueda en el formulario con debounce para evitar llamadas excesivas
+            let searchTimeout;
             document.getElementById('ppu').addEventListener('input', async () => {
+                // Limpiar timeout anterior
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+                
+                // Configurar nuevo timeout para evitar llamadas excesivas
+                searchTimeout = setTimeout(async () => {
                 const query = document.getElementById('ppu').value.toLowerCase();
                 const suggestionsBox = document.getElementById('suggestions-box');
                 
@@ -6564,8 +6582,11 @@
                             document.getElementById('marca_chasis').value = bus.marca || '';
                             suggestionsBox.classList.add('hidden');
                             
+                            console.log('✅ Bus seleccionado de la lista:', bus.ppu);
                             // Verificar si el bus ya fue inspeccionado - INMEDIATAMENTE
                             onBusSelected(bus.ppu);
+                            // Mostrar toast de confirmación
+                            showToast(`Bus ${bus.ppu} seleccionado para inspección.`, 'success');
                         };
                         suggestionsBox.appendChild(div);
                     });
@@ -6574,18 +6595,57 @@
                     suggestionsBox.classList.add('hidden');
                 }
                 
-                // Verificar duplicados en tiempo real mientras se escribe
-                if (query.length >= 3) {
-                    onBusSelected(query);
-                } else {
-                    hideBusInspectionAlert();
-                }
+                // Verificar duplicados solo cuando se complete la búsqueda (no en tiempo real)
+                // Removido para evitar llamadas excesivas
+                }, 300); // 300ms de debounce
             });
             
             // Cerrar sugerencias al hacer clic fuera
             document.addEventListener('click', (e) => {
                 if (e.target.id !== 'ppu' && e.target.id !== 'suggestions-box') {
                     document.getElementById('suggestions-box').classList.add('hidden');
+                }
+            });
+            
+            // Verificar PPU cuando se confirma (Enter o blur)
+            document.getElementById('ppu').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const ppu = e.target.value.trim();
+                    if (ppu) {
+                        console.log('✅ PPU confirmada con Enter:', ppu);
+                        // Verificar si el bus ya fue inspeccionado
+                        onBusSelected(ppu);
+                        // Ocultar sugerencias
+                        document.getElementById('suggestions-box').classList.add('hidden');
+                        // Mostrar toast de confirmación
+                        showToast(`Bus ${ppu} seleccionado para inspección.`, 'success');
+                    }
+                }
+            });
+            
+            // Verificar PPU cuando se pierde el foco (blur)
+            document.getElementById('ppu').addEventListener('blur', (e) => {
+                const ppu = e.target.value.trim();
+                if (ppu) {
+                    // Pequeño delay para permitir que se complete la selección de sugerencias
+                    setTimeout(() => {
+                        onBusSelected(ppu);
+                    }, 100);
+                } else {
+                    // Si el campo está vacío, ocultar alerta
+                    hideBusInspectionAlert();
+                    hideBusStatusIndicator();
+                }
+            });
+            
+            // Limpiar alerta cuando se empiece a escribir una nueva PPU
+            document.getElementById('ppu').addEventListener('input', (e) => {
+                const ppu = e.target.value.trim();
+                if (!ppu) {
+                    // Si se borra todo el contenido, ocultar alerta
+                    hideBusInspectionAlert();
+                    hideBusStatusIndicator();
                 }
             });
             
@@ -6623,17 +6683,8 @@
                     return;
                 }
                 
-                // Verificar si el bus ya fue inspeccionado antes de guardar
-                if (typeof allInspections !== 'undefined') {
-                    const existingInspection = allInspections.find(insp => 
-                        insp.ppu.toLowerCase() === ppu.toLowerCase()
-                    );
-                    
-                    if (existingInspection) {
-                        showToast('Este bus ya fue inspeccionado. Verifica la alerta arriba.', 'warning');
-                        return;
-                    }
-                }
+                // La verificación de bus ya inspeccionado se hace automáticamente al seleccionar la PPU
+                // No es necesario verificar aquí nuevamente
                 
                 showLoader('Obteniendo ubicación GPS...');
                 
@@ -7066,8 +7117,51 @@
                 console.log('✅ Fix de emergencia aplicado');
             };
             
-            // Función para reinicializar el formulario si hay problemas
-            window.reinitializeForm = function() {
+                    // FUNCIONES DE OPTIMIZACIÓN DE RENDIMIENTO
+        window.optimizePerformance = function() {
+            console.log('🚀 Optimizando rendimiento...');
+            
+            // Limpiar intervalos innecesarios
+            if (realTimeUpdateInterval) {
+                clearInterval(realTimeUpdateInterval);
+                realTimeUpdateInterval = null;
+            }
+            
+            // Reducir frecuencia de actualizaciones
+            startRealTimeUpdates();
+            
+            // Limpiar caché de datos innecesarios
+            if (window.performance && window.performance.memory) {
+                console.log('Memoria antes:', Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024), 'MB');
+            }
+            
+            // Forzar garbage collection si está disponible
+            if (window.gc) {
+                window.gc();
+            }
+            
+            console.log('✅ Optimización completada');
+        };
+        
+        // Función para limpiar recursos del mapa
+        window.cleanupMap = function() {
+            if (map) {
+                // Limpiar capas innecesarias
+                map.eachLayer((layer) => {
+                    if (layer !== map) {
+                        map.removeLayer(layer);
+                    }
+                });
+                
+                // Reducir zoom para mejor rendimiento
+                map.setZoom(10);
+                
+                console.log('🗺️ Mapa optimizado');
+            }
+        };
+        
+        // Función para reinicializar el formulario si hay problemas
+        window.reinitializeForm = function() {
                 try {
                     // Verificar que todos los elementos estén disponibles
                     const form = document.getElementById('inspection-form');
