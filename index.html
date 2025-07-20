@@ -252,6 +252,222 @@
             top: 0;
             right: 0;
             width: 8px;
+        }
+        
+        /* ===== MEJORAS DE RESPONSIVIDAD PARA FORMULARIO ===== */
+        
+        /* Mejoras de responsividad para celulares pequeños */
+        @media (max-width: 480px) {
+            /* Reducir padding en móviles */
+            .view {
+                padding: 0.5rem !important;
+            }
+            
+            /* Ajustar tamaños de texto */
+            h1, h2 {
+                font-size: 1.25rem !important;
+                line-height: 1.5 !important;
+            }
+            
+            h3 {
+                font-size: 1.125rem !important;
+            }
+            
+            /* Mejorar espaciado en formularios */
+            .space-y-6 > * + * {
+                margin-top: 1rem !important;
+            }
+            
+            .space-y-8 > * + * {
+                margin-top: 1.25rem !important;
+            }
+            
+            /* Ajustar botones para móviles */
+            button {
+                min-height: 44px !important; /* Tamaño mínimo para touch */
+            }
+            
+            /* Mejorar campos de entrada */
+            input, textarea, select {
+                font-size: 16px !important; /* Evitar zoom en iOS */
+                padding: 0.75rem !important;
+            }
+            
+            /* Ajustar grid para móviles */
+            .grid {
+                gap: 0.75rem !important;
+            }
+            
+            /* Mejorar legibilidad de labels */
+            label {
+                font-size: 0.875rem !important;
+                margin-bottom: 0.25rem !important;
+            }
+            
+            /* Ajustar iconos en móviles */
+            .h-4.w-4 {
+                width: 1rem !important;
+                height: 1rem !important;
+            }
+            
+            .h-5.w-5 {
+                width: 1.125rem !important;
+                height: 1.125rem !important;
+            }
+            
+            .h-6.w-6 {
+                width: 1.25rem !important;
+                height: 1.25rem !important;
+            }
+            
+            /* Mejorar botones del formulario */
+            #inspection-form button {
+                width: 100% !important;
+                margin-bottom: 0.5rem !important;
+            }
+            
+            /* Ajustar campos de radio */
+            .form-radio {
+                width: 1.25rem !important;
+                height: 1.25rem !important;
+            }
+            
+            /* Mejorar espaciado de fieldset */
+            fieldset {
+                padding: 0.75rem !important;
+            }
+            
+            legend {
+                font-size: 1rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+        }
+        
+        /* Mejoras específicas para pantallas muy pequeñas */
+        @media (max-width: 360px) {
+            .view {
+                padding: 0.25rem !important;
+            }
+            
+            h1, h2 {
+                font-size: 1.125rem !important;
+            }
+            
+            .p-3 {
+                padding: 0.5rem !important;
+            }
+            
+            .p-4 {
+                padding: 0.75rem !important;
+            }
+            
+            .p-6 {
+                padding: 1rem !important;
+            }
+            
+            /* Ajustar botones para pantallas muy pequeñas */
+            button {
+                font-size: 0.875rem !important;
+                padding: 0.5rem 0.75rem !important;
+            }
+            
+            /* Mejorar campos de entrada */
+            input, textarea, select {
+                font-size: 16px !important;
+                padding: 0.625rem !important;
+            }
+        }
+        
+        /* Mejoras para tablets */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .view {
+                padding: 1rem !important;
+            }
+            
+            .grid-cols-1.sm\:grid-cols-2 {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+            
+            /* Mejorar botones en tablets */
+            #inspection-form button {
+                min-width: 120px !important;
+            }
+        }
+        
+        /* Mejoras específicas para el formulario */
+        @media (max-width: 640px) {
+            /* Hacer que los campos de radio se apilen verticalmente */
+            .flex.items-center.space-x-4 {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0.5rem !important;
+            }
+            
+            /* Ajustar espaciado de los campos */
+            .space-y-3 > * + * {
+                margin-top: 0.75rem !important;
+            }
+            
+            /* Mejorar botones de foto */
+            button[id*="-photo-btn"] {
+                padding: 0.75rem !important;
+                font-size: 0.875rem !important;
+            }
+            
+            /* Ajustar textareas */
+            textarea {
+                min-height: 80px !important;
+            }
+        }
+        
+        /* Clases utilitarias para móviles */
+        .mobile-optimized {
+            /* Optimizaciones generales para móviles */
+        }
+        
+        .mobile-optimized input,
+        .mobile-optimized textarea,
+        .mobile-optimized select {
+            font-size: 16px !important; /* Evitar zoom en iOS */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        
+        .mobile-optimized button {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Mejorar accesibilidad en móviles */
+        @media (max-width: 480px) {
+            /* Aumentar área de toque para elementos interactivos */
+            button, input[type="radio"], input[type="checkbox"], label {
+                min-height: 44px !important;
+                min-width: 44px !important;
+            }
+            
+            /* Mejorar contraste y legibilidad */
+            .text-text-secondary {
+                color: #4b5563 !important;
+            }
+            
+            .dark .text-text-secondary {
+                color: #9ca3af !important;
+            }
+            
+            /* Ajustar espaciado para mejor usabilidad */
+            .space-y-2 > * + * {
+                margin-top: 0.5rem !important;
+            }
+            
+            .space-y-4 > * + * {
+                margin-top: 1rem !important;
+            }
+        }
+        
+        /* Notification dot styles */
+        .notification-dot {
             height: 8px;
             background-color: #ef4444;
             border-radius: 50%;
@@ -746,22 +962,29 @@
                 
                 <!-- Form View -->
                 <div id="form-view" class="view">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                        <h2 class="text-2xl font-bold text-text-primary dark:text-text-primary-dark">Nuevo Registro de Inspección</h2>
-                        <button id="open-pending-modal-btn" class="flex items-center gap-2 bg-status-yellow hover:bg-amber-500 text-black font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                    <!-- Header responsivo -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
+                        <h2 class="text-xl sm:text-2xl font-bold text-text-primary dark:text-text-primary-dark">Nuevo Registro de Inspección</h2>
+                        <button id="open-pending-modal-btn" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-status-yellow hover:bg-amber-500 text-black font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 text-sm sm:text-base">
                             <i data-lucide="list-todo" class="h-4 w-4"></i> 
-                            <span>Ver Buses Pendientes</span>
+                            <span class="hidden xs:inline">Ver Buses Pendientes</span>
+                            <span class="xs:hidden">Pendientes</span>
                         </button>
                     </div>
-                    <form id="inspection-form" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md max-w-4xl mx-auto space-y-8">
+                    
+                    <!-- Formulario completamente responsivo -->
+                    <form id="inspection-form" class="bg-white dark:bg-gray-800 p-3 sm:p-4 md:p-6 rounded-xl shadow-md max-w-4xl mx-auto space-y-6 sm:space-y-8">
+                        <!-- Sección de Información del Bus - Responsiva -->
                         <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
-                            <div class="flex items-center mb-6">
-                                <div class="h-8 w-8 rounded-full bg-brand-light flex items-center justify-center mr-3">
-                                    <i data-lucide="bus" class="h-5 w-5 text-white"></i>
+                            <div class="flex items-center mb-4 sm:mb-6">
+                                <div class="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-brand-light flex items-center justify-center mr-2 sm:mr-3">
+                                    <i data-lucide="bus" class="h-4 w-4 sm:h-5 sm:w-5 text-white"></i>
                                 </div>
-                                <h3 class="text-xl font-semibold text-text-primary dark:text-text-primary-dark">Información del Bus</h3>
+                                <h3 class="text-lg sm:text-xl font-semibold text-text-primary dark:text-text-primary-dark">Información del Bus</h3>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            
+                            <!-- Grid responsivo para campos del bus -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                                 <div class="relative">
                                     <label for="ppu" class="block text-sm font-medium text-text-secondary dark:text-text-secondary-dark mb-1">PPU / N° Interno</label>
                                     <div class="relative">
@@ -781,58 +1004,69 @@
                                     <input type="text" id="marca_chasis" name="marca_chasis" readonly class="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm bg-gray-100 dark:bg-gray-800 text-text-primary dark:text-text-primary-dark cursor-not-allowed">
                                 </div>
                             </div>
-                            <div class="mt-4">
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-sm font-medium text-text-secondary dark:text-text-secondary-dark">Ubicación actual:</span>
-                                    <span id="current-terminal" class="text-sm font-semibold text-brand-primary dark:text-brand-light">Detectando...</span>
+                            <!-- Información de ubicación e inspector - Responsiva -->
+                            <div class="mt-4 space-y-2 sm:space-y-3">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+                                    <span class="text-xs sm:text-sm font-medium text-text-secondary dark:text-text-secondary-dark">Ubicación actual:</span>
+                                    <span id="current-terminal" class="text-xs sm:text-sm font-semibold text-brand-primary dark:text-brand-light">Detectando...</span>
                                 </div>
-                                <div class="mt-2 flex items-center space-x-2">
-                                    <span class="text-sm font-medium text-text-secondary dark:text-text-secondary-dark">Inspector asignado:</span>
-                                    <span id="current-inspector" class="text-sm font-semibold text-brand-secondary dark:text-brand-light">Detectando...</span>
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+                                    <span class="text-xs sm:text-sm font-medium text-text-secondary dark:text-text-secondary-dark">Inspector asignado:</span>
+                                    <span id="current-inspector" class="text-xs sm:text-sm font-semibold text-brand-secondary dark:text-brand-light">Detectando...</span>
                                 </div>
                                 <div id="bus-status-indicator" class="mt-2 hidden">
                                     <div class="flex items-center space-x-2 p-2 bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700 rounded-md">
                                         <i data-lucide="alert-triangle" class="h-4 w-4 text-yellow-600 dark:text-yellow-400"></i>
-                                        <span class="text-sm text-yellow-800 dark:text-yellow-200 font-medium">Bus ya inspeccionado - Ver alerta arriba</span>
+                                        <span class="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200 font-medium">Bus ya inspeccionado - Ver alerta arriba</span>
                                     </div>
                                 </div>
-                                <div class="mt-2 text-xs text-text-secondary dark:text-text-secondary-dark flex items-center">
-                                    <i data-lucide="info" class="h-3 w-3 mr-1"></i>
-                                </div>
-                                <div class="mt-1 text-xs text-green-600 dark:text-green-400 flex items-center">
-                                    <i data-lucide="wifi" class="h-3 w-3 mr-1"></i>
-                                </div>
-                                <div class="mt-1 text-xs text-blue-600 dark:text-blue-400 flex items-center">
-                                    <i data-lucide="target" class="h-3 w-3 mr-1"></i>
-
+                                <!-- Indicadores de estado - Responsivos -->
+                                <div class="flex flex-wrap gap-2 mt-2">
+                                    <div class="text-xs text-text-secondary dark:text-text-secondary-dark flex items-center">
+                                        <i data-lucide="info" class="h-3 w-3 mr-1"></i>
+                                        <span class="hidden sm:inline">Conectado</span>
+                                    </div>
+                                    <div class="text-xs text-green-600 dark:text-green-400 flex items-center">
+                                        <i data-lucide="wifi" class="h-3 w-3 mr-1"></i>
+                                        <span class="hidden sm:inline">GPS Activo</span>
+                                    </div>
+                                    <div class="text-xs text-blue-600 dark:text-blue-400 flex items-center">
+                                        <i data-lucide="target" class="h-3 w-3 mr-1"></i>
+                                        <span class="hidden sm:inline">Tiempo Real</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
+                        <!-- Sección de Estado de Publicidad - Responsiva -->
                         <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
-                            <div class="flex items-center mb-6">
-                                <div class="h-8 w-8 rounded-full bg-brand-light flex items-center justify-center mr-3">
-                                    <i data-lucide="layout-dashboard" class="h-5 w-5 text-white"></i>
+                            <div class="flex items-center mb-4 sm:mb-6">
+                                <div class="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-brand-light flex items-center justify-center mr-2 sm:mr-3">
+                                    <i data-lucide="layout-dashboard" class="h-4 w-4 sm:h-5 sm:w-5 text-white"></i>
                                 </div>
-                                <h3 class="text-xl font-semibold text-text-primary dark:text-text-primary-dark">Estado de la Publicidad</h3>
+                                <h3 class="text-lg sm:text-xl font-semibold text-text-primary dark:text-text-primary-dark">Estado de la Publicidad</h3>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            
+                            <!-- Grid responsivo para publicidad -->
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                                 <fieldset class="space-y-3">
-                                    <legend class="text-lg font-semibold text-text-primary dark:text-text-primary-dark">Publicidad Izquierda</legend>
-                                    <div class="flex items-center space-x-4">
+                                    <legend class="text-base sm:text-lg font-semibold text-text-primary dark:text-text-primary-dark">Publicidad Izquierda</legend>
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="pub_izq_si" name="publicidad_izquierda" value="true" class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">Sí</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">Sí</span>
                                         </label>
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="pub_izq_no" name="publicidad_izquierda" value="false" checked class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">No</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">No</span>
                                         </label>
                                     </div>
-                                    <textarea id="publicidad_izquierda_detalle" name="publicidad_izquierda_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark" placeholder="Detalle de la publicidad..."></textarea>
+                                    <textarea id="publicidad_izquierda_detalle" name="publicidad_izquierda_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark text-sm" placeholder="Detalle de la publicidad..."></textarea>
                                     <div id="pub-izq-photo-container" class="hidden mt-2">
-                                        <button type="button" id="pub-izq-photo-btn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                                            <i data-lucide="camera" class="h-4 w-4 mr-2"></i> Tomar Foto
+                                        <button type="button" id="pub-izq-photo-btn" class="w-full flex items-center justify-center py-2 px-3 sm:px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                            <i data-lucide="camera" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                            <span class="hidden sm:inline">Tomar Foto</span>
+                                            <span class="sm:hidden">Foto</span>
                                         </button>
                                         <div id="pub-izq-photo-preview" class="mt-2 hidden">
                                             <img src="" alt="Vista previa" class="w-full h-auto rounded-md">
@@ -840,21 +1074,23 @@
                                     </div>
                                 </fieldset>
                                 <fieldset class="space-y-3">
-                                    <legend class="text-lg font-semibold text-text-primary dark:text-text-primary-dark">Publicidad Luneta</legend>
-                                    <div class="flex items-center space-x-4">
+                                    <legend class="text-base sm:text-lg font-semibold text-text-primary dark:text-text-primary-dark">Publicidad Luneta</legend>
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="pub_luneta_si" name="publicidad_luneta" value="true" class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">Sí</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">Sí</span>
                                         </label>
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="pub_luneta_no" name="publicidad_luneta" value="false" checked class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">No</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">No</span>
                                         </label>
                                     </div>
-                                    <textarea id="publicidad_luneta_detalle" name="publicidad_luneta_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark" placeholder="Detalle de la publicidad..."></textarea>
+                                    <textarea id="publicidad_luneta_detalle" name="publicidad_luneta_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark text-sm" placeholder="Detalle de la publicidad..."></textarea>
                                     <div id="pub-luneta-photo-container" class="hidden mt-2">
-                                        <button type="button" id="pub-luneta-photo-btn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                                            <i data-lucide="camera" class="h-4 w-4 mr-2"></i> Tomar Foto
+                                        <button type="button" id="pub-luneta-photo-btn" class="w-full flex items-center justify-center py-2 px-3 sm:px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                            <i data-lucide="camera" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                            <span class="hidden sm:inline">Tomar Foto</span>
+                                            <span class="sm:hidden">Foto</span>
                                         </button>
                                         <div id="pub-luneta-photo-preview" class="mt-2 hidden">
                                             <img src="" alt="Vista previa" class="w-full h-auto rounded-md">
@@ -862,21 +1098,23 @@
                                     </div>
                                 </fieldset>
                                 <fieldset class="space-y-3">
-                                    <legend class="text-lg font-semibold text-text-primary dark:text-text-primary-dark">Publicidad Derecha (DTPM)</legend>
-                                    <div class="flex items-center space-x-4">
+                                    <legend class="text-base sm:text-lg font-semibold text-text-primary dark:text-text-primary-dark">Publicidad Derecha (DTPM)</legend>
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="pub_der_si" name="publicidad_derecha" value="true" class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">Sí</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">Sí</span>
                                         </label>
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="pub_der_no" name="publicidad_derecha" value="false" checked class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">No</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">No</span>
                                         </label>
                                     </div>
-                                    <textarea id="publicidad_derecha_detalle" name="publicidad_derecha_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark" placeholder="Detalle de la publicidad..."></textarea>
+                                    <textarea id="publicidad_derecha_detalle" name="publicidad_derecha_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark text-sm" placeholder="Detalle de la publicidad..."></textarea>
                                     <div id="pub-der-photo-container" class="hidden mt-2">
-                                        <button type="button" id="pub-der-photo-btn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                                            <i data-lucide="camera" class="h-4 w-4 mr-2"></i> Tomar Foto
+                                        <button type="button" id="pub-der-photo-btn" class="w-full flex items-center justify-center py-2 px-3 sm:px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                            <i data-lucide="camera" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                            <span class="hidden sm:inline">Tomar Foto</span>
+                                            <span class="sm:hidden">Foto</span>
                                         </button>
                                         <div id="pub-der-photo-preview" class="mt-2 hidden">
                                             <img src="" alt="Vista previa" class="w-full h-auto rounded-md">
@@ -886,30 +1124,35 @@
                             </div>
                         </div>
 
+                        <!-- Sección de Observaciones Adicionales - Responsiva -->
                         <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
-                            <div class="flex items-center mb-6">
-                                <div class="h-8 w-8 rounded-full bg-brand-light flex items-center justify-center mr-3">
-                                    <i data-lucide="alert-triangle" class="h-5 w-5 text-white"></i>
+                            <div class="flex items-center mb-4 sm:mb-6">
+                                <div class="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-brand-light flex items-center justify-center mr-2 sm:mr-3">
+                                    <i data-lucide="alert-triangle" class="h-4 w-4 sm:h-5 sm:w-5 text-white"></i>
                                 </div>
-                                <h3 class="text-xl font-semibold text-text-primary dark:text-text-primary-dark">Observaciones Adicionales</h3>
+                                <h3 class="text-lg sm:text-xl font-semibold text-text-primary dark:text-text-primary-dark">Observaciones Adicionales</h3>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            
+                            <!-- Grid responsivo para observaciones -->
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
                                 <fieldset class="space-y-3">
-                                    <legend class="text-lg font-semibold text-text-primary dark:text-text-primary-dark">Residuos de Pegamento</legend>
-                                    <div class="flex items-center space-x-4">
+                                    <legend class="text-base sm:text-lg font-semibold text-text-primary dark:text-text-primary-dark">Residuos de Pegamento</legend>
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="residuos_si" name="residuos_pegamento" value="true" class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">Sí</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">Sí</span>
                                         </label>
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="residuos_no" name="residuos_pegamento" value="false" checked class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">No</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">No</span>
                                         </label>
                                     </div>
-                                    <textarea id="residuos_pegamento_detalle" name="residuos_pegamento_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark" placeholder="Ubicación y detalle de residuos..."></textarea>
+                                    <textarea id="residuos_pegamento_detalle" name="residuos_pegamento_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark text-sm" placeholder="Ubicación y detalle de residuos..."></textarea>
                                     <div id="residuos-photo-container" class="hidden mt-2">
-                                        <button type="button" id="residuos-photo-btn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                                            <i data-lucide="camera" class="h-4 w-4 mr-2"></i> Tomar Foto
+                                        <button type="button" id="residuos-photo-btn" class="w-full flex items-center justify-center py-2 px-3 sm:px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                            <i data-lucide="camera" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                            <span class="hidden sm:inline">Tomar Foto</span>
+                                            <span class="sm:hidden">Foto</span>
                                         </button>
                                         <div id="residuos-photo-preview" class="mt-2 hidden">
                                             <img src="" alt="Vista previa" class="w-full h-auto rounded-md">
@@ -917,21 +1160,23 @@
                                     </div>
                                 </fieldset>
                                 <fieldset class="space-y-3">
-                                    <legend class="text-lg font-semibold text-text-primary dark:text-text-primary-dark">Daño de Pintura</legend>
-                                    <div class="flex items-center space-x-4">
+                                    <legend class="text-base sm:text-lg font-semibold text-text-primary dark:text-text-primary-dark">Daño de Pintura</legend>
+                                    <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-4 space-y-2 sm:space-y-0">
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="dano_si" name="dano_pintura" value="true" class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">Sí</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">Sí</span>
                                         </label>
                                         <label class="inline-flex items-center">
                                             <input type="radio" id="dano_no" name="dano_pintura" value="false" checked class="form-radio h-4 w-4 text-brand-primary border-gray-300 focus:ring-brand-primary">
-                                            <span class="ml-2 text-text-primary dark:text-text-primary-dark">No</span>
+                                            <span class="ml-2 text-sm sm:text-base text-text-primary dark:text-text-primary-dark">No</span>
                                         </label>
                                     </div>
-                                    <textarea id="dano_pintura_detalle" name="dano_pintura_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark" placeholder="Ubicación y detalle del daño..."></textarea>
+                                    <textarea id="dano_pintura_detalle" name="dano_pintura_detalle" rows="3" class="hidden mt-2 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-brand-primary focus:ring focus:ring-brand-primary focus:ring-opacity-50 bg-white dark:bg-gray-700 text-text-primary dark:text-text-primary-dark text-sm" placeholder="Ubicación y detalle del daño..."></textarea>
                                     <div id="dano-photo-container" class="hidden mt-2">
-                                        <button type="button" id="dano-photo-btn" class="w-full flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                                            <i data-lucide="camera" class="h-4 w-4 mr-2"></i> Tomar Foto
+                                        <button type="button" id="dano-photo-btn" class="w-full flex items-center justify-center py-2 px-3 sm:px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs sm:text-sm font-medium text-text-primary dark:text-text-primary-dark bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                            <i data-lucide="camera" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                            <span class="hidden sm:inline">Tomar Foto</span>
+                                            <span class="sm:hidden">Foto</span>
                                         </button>
                                         <div id="dano-photo-preview" class="mt-2 hidden">
                                             <img src="" alt="Vista previa" class="w-full h-auto rounded-md">
@@ -941,15 +1186,22 @@
                             </div>
                         </div>
                         
-                        <div class="flex justify-end pt-4">
-                            <button type="button" onclick="reinitializeForm()" class="mr-3 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg flex items-center shadow-md transition-colors duration-200" title="Reinicializar formulario si hay problemas">
-                                <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i> Reinicializar
+                        <!-- Botones del formulario - Completamente responsivos -->
+                        <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                            <button type="button" onclick="reinitializeForm()" class="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-3 sm:px-4 rounded-lg flex items-center justify-center shadow-md transition-colors duration-200 text-sm sm:text-base" title="Reinicializar formulario si hay problemas">
+                                <i data-lucide="refresh-cw" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                <span class="hidden sm:inline">Reinicializar</span>
+                                <span class="sm:hidden">Reiniciar</span>
                             </button>
-                            <button type="button" id="form-save-draft" class="mr-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-text-primary dark:text-text-primary-dark font-medium py-2 px-4 rounded-lg flex items-center shadow-md transition-colors duration-200">
-                                <i data-lucide="archive" class="h-4 w-4 mr-2"></i> Guardar Borrador
+                            <button type="button" id="form-save-draft" class="w-full sm:w-auto bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-text-primary dark:text-text-primary-dark font-medium py-2 px-3 sm:px-4 rounded-lg flex items-center justify-center shadow-md transition-colors duration-200 text-sm sm:text-base">
+                                <i data-lucide="archive" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                <span class="hidden sm:inline">Guardar Borrador</span>
+                                <span class="sm:hidden">Borrador</span>
                             </button>
-                            <button type="submit" class="bg-brand-secondary hover:bg-brand-dark text-white font-bold py-2 px-6 rounded-lg flex items-center shadow-md hover:shadow-lg transition-all duration-300 ease-in-out">
-                                <i data-lucide="save" class="h-4 w-4 mr-2"></i> Guardar Registro
+                            <button type="submit" class="w-full sm:w-auto bg-brand-secondary hover:bg-brand-dark text-white font-bold py-2 px-4 sm:px-6 rounded-lg flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 ease-in-out text-sm sm:text-base">
+                                <i data-lucide="save" class="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2"></i> 
+                                <span class="hidden sm:inline">Guardar Registro</span>
+                                <span class="sm:hidden">Guardar</span>
                             </button>
                         </div>
                     </form>
@@ -6132,6 +6384,16 @@
         
         // Event listeners
         document.addEventListener('DOMContentLoaded', async function() {
+            // Verificar que las funciones de alerta estén disponibles
+            if (typeof hideBusInspectionAlert === 'undefined') {
+                console.error('Funciones de alerta no están disponibles. Verificando en 1 segundo...');
+                setTimeout(() => {
+                    if (typeof hideBusInspectionAlert === 'undefined') {
+                        console.error('ERROR: Las funciones de alerta no se cargaron correctamente');
+                        alert('Error: Las funciones de alerta no se cargaron. Por favor, recarga la página.');
+                    }
+                }, 1000);
+            }
             // Inicializar Supabase
             dbClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             
@@ -6331,9 +6593,25 @@
             document.getElementById('inspection-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                // Verificar que el formulario esté listo
-                if (!ensureFormReady()) {
-                    return;
+                // Verificar que el formulario esté listo (con fallback)
+                if (typeof ensureFormReady === 'function') {
+                    if (!ensureFormReady()) {
+                        return;
+                    }
+                } else {
+                    // Fallback si ensureFormReady no está disponible
+                    const requiredElements = ['ppu', 'numero_interno', 'marca_chasis'];
+                    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+                    
+                    if (missingElements.length > 0) {
+                        showToast('Error: Formulario no está completamente cargado. Por favor, recarga la página.', 'error');
+                        return;
+                    }
+                    
+                    if (typeof dbClient === 'undefined' || !dbClient) {
+                        showToast('Error: Conexión a la base de datos no disponible. Por favor, recarga la página.', 'error');
+                        return;
+                    }
                 }
                 
                 // Verificar que se haya seleccionado un bus
@@ -6471,14 +6749,37 @@
             // Función para verificar el estado del formulario (para debugging)
             window.checkFormStatus = function() {
                 console.log('=== ESTADO DEL FORMULARIO ===');
-                console.log('Cliente Supabase:', !!dbClient);
+                console.log('Cliente Supabase:', typeof dbClient, !!dbClient);
                 console.log('allInspections:', typeof allInspections, allInspections ? allInspections.length : 'undefined');
                 console.log('Formulario:', !!document.getElementById('inspection-form'));
                 console.log('Campo PPU:', !!document.getElementById('ppu'));
                 console.log('Campo N° Interno:', !!document.getElementById('numero_interno'));
                 console.log('Campo Marca:', !!document.getElementById('marca_chasis'));
                 console.log('Vista actual:', currentView);
+                console.log('ensureFormReady disponible:', typeof ensureFormReady);
+                console.log('showToast disponible:', typeof showToast);
+                console.log('hideBusInspectionAlert disponible:', typeof hideBusInspectionAlert);
                 console.log('==============================');
+            };
+            
+            // Función para probar el botón de registro
+            window.testFormSubmission = function() {
+                console.log('=== PROBANDO ENVÍO DE FORMULARIO ===');
+                
+                // Simular un envío de formulario
+                const form = document.getElementById('inspection-form');
+                if (!form) {
+                    console.error('Formulario no encontrado');
+                    return;
+                }
+                
+                // Crear un evento de submit
+                const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                
+                // Disparar el evento
+                form.dispatchEvent(submitEvent);
+                
+                console.log('Evento de submit disparado');
             };
             
             // Función para reinicializar el formulario si hay problemas
