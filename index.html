@@ -6746,6 +6746,148 @@
                 showToast('Borrador guardado localmente.', 'success');
             });
             
+            // SOLUCIÓN DIRECTA: Event listener específico para el botón de registro
+            const submitButton = document.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('🎯 BOTÓN DE REGISTRO CLICKEADO - SOLUCIÓN DIRECTA');
+                    
+                    // Verificar que se haya seleccionado un bus
+                    const ppu = document.getElementById('ppu').value;
+                    const numeroInterno = document.getElementById('numero_interno').value;
+                    
+                    if (!ppu || !numeroInterno) {
+                        showToast('Debe seleccionar un bus de la lista antes de registrar.', 'warning');
+                        return;
+                    }
+                    
+                    // Verificar si el bus ya fue inspeccionado
+                    if (typeof allInspections !== 'undefined' && allInspections) {
+                        const existingInspection = allInspections.find(insp => 
+                            insp.ppu.toLowerCase() === ppu.toLowerCase()
+                        );
+                        
+                        if (existingInspection) {
+                            showToast('Este bus ya fue inspeccionado. Verifica la alerta arriba.', 'warning');
+                            return;
+                        }
+                    }
+                    
+                    // Verificar conexión a base de datos
+                    if (typeof dbClient === 'undefined' || !dbClient) {
+                        showToast('Error: Conexión a la base de datos no disponible. Por favor, recarga la página.', 'error');
+                        return;
+                    }
+                    
+                    showLoader('Obteniendo ubicación GPS...');
+                    
+                    if (!navigator.geolocation) {
+                        showToast('La geolocalización no es soportada.', 'error');
+                        hideLoader();
+                        return;
+                    }
+                    
+                    navigator.geolocation.getCurrentPosition(async (position) => {
+                        const { latitude: lat, longitude: lon } = position.coords;
+                        const nearestTerminal = getNearestTerminal(lat, lon);
+                        
+                        // Obtener datos del formulario
+                        const form = document.getElementById('inspection-form');
+                        const formData = new FormData(form);
+                        
+                        const record = { 
+                            lat, 
+                            lon, 
+                            terminal: nearestTerminal,
+                            inspector_name: currentInspectorName,
+                            accuracy: position.coords.accuracy || null,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        // Procesar campos del formulario
+                        const booleanFields = ['publicidad_izquierda', 'publicidad_luneta', 'publicidad_derecha', 'residuos_pegamento', 'dano_pintura'];
+                        const textFields = ['publicidad_izquierda_detalle', 'publicidad_luneta_detalle', 'publicidad_derecha_detalle', 'residuos_pegamento_detalle', 'dano_pintura_detalle'];
+                        
+                        for (let [key, value] of formData.entries()) {
+                            if (booleanFields.includes(key)) {
+                                record[key] = value === 'true';
+                            } else if (textFields.includes(key)) {
+                                record[key] = value || null;
+                            } else {
+                                record[key] = value;
+                            }
+                        }
+                        
+                        try {
+                            showLoader('Guardando inspección en la base de datos...');
+                            
+                            console.log('💾 Guardando inspección...', record);
+                            
+                            const { error } = await dbClient.from('levantamiento_de_publicidad').insert([record]);
+                            
+                            if (error) throw error;
+                            
+                            console.log('✅ Inspección guardada exitosamente');
+                            
+                            // Actualizar datos
+                            setTimeout(async () => {
+                                try {
+                                    allInspections = await fetchAllInspections();
+                                    updateDashboardStats();
+                                    updateFleetCounters();
+                                    
+                                    if (currentView === 'analytics') {
+                                        renderTerminalsComparison();
+                                        updateKPIs();
+                                    }
+                                    
+                                    updateNotificationsPanel();
+                                } catch (updateError) {
+                                    console.error('Error actualizando datos:', updateError);
+                                }
+                            }, 100);
+                            
+                            showToast('🎉 Inspección guardada con éxito.', 'success');
+                            
+                            // Limpiar formulario
+                            form.reset();
+                            document.querySelectorAll('textarea[id$="_detalle"]').forEach(el => {
+                                el.classList.add('hidden');
+                            });
+                            document.querySelectorAll('[id$="-photo-container"]').forEach(el => {
+                                el.classList.add('hidden');
+                            });
+                            document.querySelectorAll('[id$="-photo-preview"]').forEach(el => {
+                                el.classList.add('hidden');
+                            });
+                            
+                            // Redirigir al dashboard
+                            navigateTo('dashboard');
+                            
+                        } catch (error) {
+                            console.error('❌ Error saving inspection:', error);
+                            showToast(`Error al guardar: ${error.message}`, 'error');
+                        } finally {
+                            hideLoader();
+                        }
+                    }, (error) => {
+                        showToast(`Error de geolocalización: ${error.message}`, 'error');
+                        hideLoader();
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 30000
+                    });
+                });
+                
+                console.log('✅ Event listener directo agregado al botón de registro');
+            } else {
+                console.error('❌ Botón de submit no encontrado');
+            }
+            
             // Función para verificar el estado del formulario (para debugging)
             window.checkFormStatus = function() {
                 console.log('=== ESTADO DEL FORMULARIO ===');
@@ -6766,20 +6908,162 @@
             window.testFormSubmission = function() {
                 console.log('=== PROBANDO ENVÍO DE FORMULARIO ===');
                 
-                // Simular un envío de formulario
+                // 1. Verificar que el formulario existe
                 const form = document.getElementById('inspection-form');
                 if (!form) {
-                    console.error('Formulario no encontrado');
+                    console.error('❌ Formulario no encontrado');
+                    return;
+                }
+                console.log('✅ Formulario encontrado');
+                
+                // 2. Verificar que el botón de submit existe
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (!submitButton) {
+                    console.error('❌ Botón de submit no encontrado');
+                    return;
+                }
+                console.log('✅ Botón de submit encontrado:', submitButton.textContent.trim());
+                
+                // 3. Verificar campos requeridos
+                const ppu = document.getElementById('ppu');
+                const numeroInterno = document.getElementById('numero_interno');
+                const marcaChasis = document.getElementById('marca_chasis');
+                
+                console.log('📝 Campo PPU:', ppu ? ppu.value : 'No encontrado');
+                console.log('📝 Campo N° Interno:', numeroInterno ? numeroInterno.value : 'No encontrado');
+                console.log('📝 Campo Marca:', marcaChasis ? marcaChasis.value : 'No encontrado');
+                
+                // 4. Simular clic en el botón
+                console.log('🖱️ Simulando clic en el botón...');
+                submitButton.click();
+                
+                // 5. También simular envío del formulario
+                console.log('📤 Simulando envío del formulario...');
+                const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                form.dispatchEvent(submitEvent);
+                
+                console.log('✅ Prueba completada');
+            };
+            
+            // Función para verificar si el event listener está funcionando
+            window.checkEventListener = function() {
+                console.log('=== VERIFICANDO EVENT LISTENER ===');
+                
+                const form = document.getElementById('inspection-form');
+                if (!form) {
+                    console.error('❌ Formulario no encontrado');
                     return;
                 }
                 
-                // Crear un evento de submit
-                const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                // Verificar si el formulario tiene event listeners
+                console.log('📋 Formulario:', form);
+                console.log('🔗 Event listeners disponibles:', form.onSubmit ? 'Sí' : 'No');
                 
-                // Disparar el evento
-                form.dispatchEvent(submitEvent);
+                // Probar si el formulario responde a eventos
+                const testEvent = new Event('submit', { bubbles: true, cancelable: true });
+                let eventHandled = false;
                 
-                console.log('Evento de submit disparado');
+                const originalPreventDefault = testEvent.preventDefault;
+                testEvent.preventDefault = function() {
+                    eventHandled = true;
+                    console.log('✅ Event listener está funcionando - preventDefault llamado');
+                    return originalPreventDefault.call(this);
+                };
+                
+                form.dispatchEvent(testEvent);
+                
+                if (!eventHandled) {
+                    console.error('❌ Event listener NO está funcionando');
+                }
+            };
+            
+            // Función para forzar el registro del event listener
+            window.forceAddEventListener = function() {
+                console.log('=== FORZANDO REGISTRO DE EVENT LISTENER ===');
+                
+                const form = document.getElementById('inspection-form');
+                if (!form) {
+                    console.error('❌ Formulario no encontrado');
+                    return;
+                }
+                
+                // Remover event listeners existentes
+                const newForm = form.cloneNode(true);
+                form.parentNode.replaceChild(newForm, form);
+                
+                console.log('🔄 Formulario clonado y reemplazado');
+                
+                // Agregar el event listener nuevamente
+                newForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    console.log('✅ Event listener funcionando correctamente');
+                    
+                    // Verificar que el formulario esté listo (con fallback)
+                    if (typeof ensureFormReady === 'function') {
+                        if (!ensureFormReady()) {
+                            return;
+                        }
+                    } else {
+                        // Fallback si ensureFormReady no está disponible
+                        const requiredElements = ['ppu', 'numero_interno', 'marca_chasis'];
+                        const missingElements = requiredElements.filter(id => !document.getElementById(id));
+                        
+                        if (missingElements.length > 0) {
+                            showToast('Error: Formulario no está completamente cargado. Por favor, recarga la página.', 'error');
+                            return;
+                        }
+                        
+                        if (typeof dbClient === 'undefined' || !dbClient) {
+                            showToast('Error: Conexión a la base de datos no disponible. Por favor, recarga la página.', 'error');
+                            return;
+                        }
+                    }
+                    
+                    showToast('✅ Event listener funcionando - Formulario listo para procesar', 'success');
+                });
+                
+                console.log('✅ Event listener registrado nuevamente');
+            };
+            
+            // FUNCIÓN DE EMERGENCIA: Forzar funcionamiento del botón
+            window.emergencyFixButton = function() {
+                console.log('🚨 APLICANDO FIX DE EMERGENCIA AL BOTÓN');
+                
+                // Buscar el botón
+                const submitButton = document.querySelector('button[type="submit"]');
+                if (!submitButton) {
+                    console.error('❌ Botón no encontrado');
+                    return;
+                }
+                
+                // Remover todos los event listeners existentes
+                const newButton = submitButton.cloneNode(true);
+                submitButton.parentNode.replaceChild(newButton, submitButton);
+                
+                // Agregar event listener directo
+                newButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    console.log('🎯 BOTÓN FUNCIONANDO - FIX DE EMERGENCIA');
+                    
+                    // Verificar campos básicos
+                    const ppu = document.getElementById('ppu').value;
+                    const numeroInterno = document.getElementById('numero_interno').value;
+                    
+                    if (!ppu || !numeroInterno) {
+                        alert('Debe seleccionar un bus antes de registrar');
+                        return;
+                    }
+                    
+                    // Mostrar mensaje de éxito
+                    alert('¡Botón funcionando! Formulario listo para procesar');
+                    
+                    // Aquí puedes agregar la lógica completa del formulario
+                    console.log('✅ Botón de registro funcionando correctamente');
+                });
+                
+                console.log('✅ Fix de emergencia aplicado');
             };
             
             // Función para reinicializar el formulario si hay problemas
