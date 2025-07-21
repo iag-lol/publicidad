@@ -2075,6 +2075,10 @@
                             <input type="checkbox" id="col-ubicacion" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
                             <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Ubicación</span>
                         </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" id="col-observaciones" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
+                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Observaciones</span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -5924,7 +5928,8 @@
                     publicidad: document.getElementById('col-publicidad').checked,
                     detalles: document.getElementById('col-detalles').checked,
                     fecha: document.getElementById('col-fecha').checked,
-                    ubicacion: document.getElementById('col-ubicacion').checked
+                    ubicacion: document.getElementById('col-ubicacion').checked,
+                    observaciones: document.getElementById('col-observaciones').checked
                 };
                 
                 // Filtrar datos
@@ -5968,6 +5973,13 @@
                     if (i.dano_pintura) detalles.push(`Daño: ${i.dano_pintura_detalle}`);
                     if (i.residuos_pegamento) detalles.push(`Residuos: ${i.residuos_pegamento_detalle}`);
                     
+                    const observaciones = [];
+                    if (i.publicidad_izquierda_detalle) observaciones.push(`Izq: ${i.publicidad_izquierda_detalle}`);
+                    if (i.publicidad_luneta_detalle) observaciones.push(`Luneta: ${i.publicidad_luneta_detalle}`);
+                    if (i.publicidad_derecha_detalle) observaciones.push(`Der: ${i.publicidad_derecha_detalle}`);
+                    if (i.dano_pintura_detalle) observaciones.push(`Daño: ${i.dano_pintura_detalle}`);
+                    if (i.residuos_pegamento_detalle) observaciones.push(`Residuos: ${i.residuos_pegamento_detalle}`);
+                    
                     const row = {};
                     
                     if (columns.ppu) row['PPU'] = i.ppu;
@@ -5978,6 +5990,7 @@
                     if (columns.detalles) row['Detalles'] = detalles.length > 0 ? detalles.join(' | ') : 'Sin novedad';
                     if (columns.fecha) row['Fecha'] = new Date(i.created_at).toLocaleString();
                     if (columns.ubicacion) row['Ubicación'] = i.lat && i.lon ? `${i.lat}, ${i.lon}` : 'No disponible';
+                    if (columns.observaciones) row['Observaciones'] = observaciones.length > 0 ? observaciones.join(' | ') : 'Sin observaciones';
                     
                     return row;
                 });
