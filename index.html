@@ -2289,6 +2289,7 @@
                 },
                 (error) => {
                     console.error('Error en seguimiento de ubicación:', error);
+                    showGeolocationError(error);
                 },
                 options
             );
@@ -3374,7 +3375,7 @@
                 const { data, error } = await dbClient
                     .from('active_users')
                     .select('*')
-                    .gte('last_activity', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Últimos 5 minutos
+                    .gte('last_activity', new Date(Date.now() - 60 * 1000).toISOString()) // Último minuto
                     .order('last_activity', { ascending: false });
                 
                 if (error) throw error;
@@ -3455,7 +3456,7 @@
                 clearInterval(userActivityInterval);
             }
             
-            // Actualizar actividad cada 30 segundos
+            // Actualizar actividad cada 20 segundos
             userActivityInterval = setInterval(async () => {
                 if (lastKnownPosition && currentTerminal && currentTerminal !== 'Detectando...') {
                     await registerActiveUser(
@@ -3465,7 +3466,7 @@
                         currentInspectorName
                     );
                 }
-            }, 30000); // 30 segundos
+            }, 20000); // 20 segundos
         }
         
         // Iniciar actualización de usuarios activos
