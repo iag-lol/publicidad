@@ -2261,7 +2261,7 @@
             
             // Configurar seguimiento de ubicación optimizado (menos frecuente)
             const options = {
-                enableHighAccuracy: false, // Cambiar a false para mejor rendimiento
+                enableHighAccuracy: true, // Cambiado a true para máxima precisión GPS
                 timeout: 5000, // Reducido a 5 segundos
                 maximumAge: 60000 // Usar ubicación cacheada si tiene menos de 1 minuto
             };
