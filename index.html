@@ -2075,30 +2075,6 @@
                             <input type="checkbox" id="col-ubicacion" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
                             <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Ubicación</span>
                         </label>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" id="col-observaciones" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
-                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Observaciones</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" id="col-publicidad-izquierda" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
-                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Publicidad Izquierda</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" id="col-publicidad-luneta" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
-                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Publicidad Luneta</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" id="col-publicidad-derecha" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
-                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Publicidad Derecha</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" id="col-dano-pintura" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
-                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Daño de Pintura</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="checkbox" id="col-residuos-pegamento" checked class="form-checkbox h-4 w-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary">
-                            <span class="ml-2 text-sm text-text-primary dark:text-text-primary-dark">Residuos de Pegamento</span>
-                        </label>
                     </div>
                 </div>
             </div>
@@ -2261,7 +2237,7 @@
             
             // Configurar seguimiento de ubicación optimizado (menos frecuente)
             const options = {
-                enableHighAccuracy: true, // Cambiado a true para máxima precisión GPS
+                enableHighAccuracy: false, // Cambiar a false para mejor rendimiento
                 timeout: 5000, // Reducido a 5 segundos
                 maximumAge: 60000 // Usar ubicación cacheada si tiene menos de 1 minuto
             };
@@ -2289,7 +2265,6 @@
                 },
                 (error) => {
                     console.error('Error en seguimiento de ubicación:', error);
-                    showGeolocationError(error);
                 },
                 options
             );
@@ -3375,7 +3350,7 @@
                 const { data, error } = await dbClient
                     .from('active_users')
                     .select('*')
-                    .gte('last_activity', new Date(Date.now() - 60 * 1000).toISOString()) // Último minuto
+                    .gte('last_activity', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // Últimos 5 minutos
                     .order('last_activity', { ascending: false });
                 
                 if (error) throw error;
@@ -3456,7 +3431,7 @@
                 clearInterval(userActivityInterval);
             }
             
-            // Actualizar actividad cada 20 segundos
+            // Actualizar actividad cada 30 segundos
             userActivityInterval = setInterval(async () => {
                 if (lastKnownPosition && currentTerminal && currentTerminal !== 'Detectando...') {
                     await registerActiveUser(
@@ -3466,7 +3441,7 @@
                         currentInspectorName
                     );
                 }
-            }, 20000); // 20 segundos
+            }, 30000); // 30 segundos
         }
         
         // Iniciar actualización de usuarios activos
@@ -5949,12 +5924,7 @@
                     publicidad: document.getElementById('col-publicidad').checked,
                     detalles: document.getElementById('col-detalles').checked,
                     fecha: document.getElementById('col-fecha').checked,
-                    ubicacion: document.getElementById('col-ubicacion').checked,
-                    publicidadIzquierda: document.getElementById('col-publicidad-izquierda').checked,
-                    publicidadLuneta: document.getElementById('col-publicidad-luneta').checked,
-                    publicidadDerecha: document.getElementById('col-publicidad-derecha').checked,
-                    danoPintura: document.getElementById('col-dano-pintura').checked,
-                    residuosPegamento: document.getElementById('col-residuos-pegamento').checked
+                    ubicacion: document.getElementById('col-ubicacion').checked
                 };
                 
                 // Filtrar datos
@@ -6008,11 +5978,6 @@
                     if (columns.detalles) row['Detalles'] = detalles.length > 0 ? detalles.join(' | ') : 'Sin novedad';
                     if (columns.fecha) row['Fecha'] = new Date(i.created_at).toLocaleString();
                     if (columns.ubicacion) row['Ubicación'] = i.lat && i.lon ? `${i.lat}, ${i.lon}` : 'No disponible';
-                    if (columns.publicidadIzquierda) row['Publicidad Izquierda'] = i.publicidad_izquierda ? (i.publicidad_izquierda_detalle || 'Sí') : 'No';
-                    if (columns.publicidadLuneta) row['Publicidad Luneta'] = i.publicidad_luneta ? (i.publicidad_luneta_detalle || 'Sí') : 'No';
-                    if (columns.publicidadDerecha) row['Publicidad Derecha'] = i.publicidad_derecha ? (i.publicidad_derecha_detalle || 'Sí') : 'No';
-                    if (columns.danoPintura) row['Daño de Pintura'] = i.dano_pintura ? (i.dano_pintura_detalle || 'Sí') : 'No';
-                    if (columns.residuosPegamento) row['Residuos de Pegamento'] = i.residuos_pegamento ? (i.residuos_pegamento_detalle || 'Sí') : 'No';
                     
                     return row;
                 });
